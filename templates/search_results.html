@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Arama Sonuçları: "{{ search_query }}"</h2>
+    
+    <div class="mt-3 mb-3">
+        <form action="{{ url_for('search') }}" method="GET" class="d-flex">
+            <input class="form-control me-2" type="search" name="query" value="{{ search_query }}" placeholder="Restoran veya yemek adı ara..." aria-label="Search">
+            <button class="btn btn-outline-success" type="submit">Ara</button>
+        </form>
+    </div>
+    
+    {% if restaurants %}
+        <p>{{ restaurants|length }} restoran bulundu.</p>
+        <div class="row">
+            {% for restaurant in restaurants %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if restaurant.image_path %}
+                            <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.image_path) }}"
+                                 class="card-img-top" alt="{{ restaurant.restaurant_name }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/restaurants/default.jpg') }}"
+                                 class="card-img-top" alt="Varsayılan Resim">
+                        {% endif %}
+                        
+                        <div class="card-body">
+                            <h5 class="card-title">{{ restaurant.restaurant_name }}</h5>
+                            <p class="card-text">
+                                <strong>Mutfak:</strong> {{ restaurant.cuisine_type }}<br>
+                                <strong>Puan:</strong>
+                                {% if restaurant.rating %}
+                                    {{ restaurant.rating }} / 5.0
+                                {% else %}
+                                    Henüz puanlanmamış
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-primary">Menüyü Görüntüle</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Aramanızla eşleşen restoran bulunamadı.
+        </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <a href="{{ url_for('home') }}" class="btn btn-secondary">Ana Sayfaya Dön</a>
+    </div>
+</div>
+{% endblock %}

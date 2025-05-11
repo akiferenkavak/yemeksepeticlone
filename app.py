@@ -5,6 +5,9 @@ from models import db, User, Restaurant, Order, OrderItem, Menu, MenuItem, Cart,
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import or_, func, and_
+
+
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"  # some security process not much important in our case
@@ -1115,6 +1118,77 @@ def edit_restaurant_profile():
             flash(f'Bir hata oluştu: {str(e)}', 'danger')
     
     return render_template("edit_restaurant_profile.html", restaurant=restaurant)
+
+
+@app.route("/cart")
+@login_required
+def cart():
+    if 'user_id' not in session:
+        flash("Sepeti görüntülemek için giriş yapmalısınız.", "warning")
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    cart_items = CartItem.query.join(Cart).filter(Cart.user_id == user_id).all()
+
+    return render_template("cart.html", cart_items=cart_items)
+
+# Search route - duplicate fonksiyon tanımlarını bu tek fonksiyonda birleştirdik
+@app.route("/search")
+def search():
+    search_query = request.args.get('query', '')
+
+    if not search_query:
+        return redirect(url_for('home'))
+
+    # Büyük-küçük harf duyarsız arama için
+    search_term = f"%{search_query.lower()}%"
+
+    # 1. Restoran ismine göre arama
+    restaurants_by_name = Restaurant.query.filter(
+        and_(
+            Restaurant.is_approved == True,
+            func.lower(Restaurant.restaurant_name).like(search_term)
+        )
+    ).all()
+
+    # 2. Menü içeriğine göre arama - restoran ID'leri
+    restaurant_ids_by_menu = db.session.query(Menu.restaurant_id).filter(
+        func.lower(Menu.item_name).like(search_term)
+    ).distinct().all()
+
+    # List comprehension ile ID'leri al
+    restaurant_ids = [id[0] for id in restaurant_ids_by_menu]
+
+    # Bu ID'lere sahip restoranları getir
+    restaurants_by_menu = []
+    if restaurant_ids:  # Empty list check to avoid SQL errors
+        restaurants_by_menu = Restaurant.query.filter(
+            and_(
+                Restaurant.is_approved == True,
+                Restaurant.id.in_(restaurant_ids)
+            )
+        ).all()
+
+    # İki sonuç kümesini birleştir ve tekrarları kaldır
+    seen = set()
+    all_restaurants = []
+
+    # İlk liste - restoran isimlerine göre eşleşenler
+    for restaurant in restaurants_by_name:
+        if restaurant.id not in seen:
+            all_restaurants.append(restaurant)
+            seen.add(restaurant.id)
+
+    # İkinci liste - menü içeriğine göre eşleşenler
+    for restaurant in restaurants_by_menu:
+        if restaurant.id not in seen:
+            all_restaurants.append(restaurant)
+            seen.add(restaurant.id)
+
+    return render_template(
+        "search_results.html",
+        restaurants=all_restaurants,
+        search_query=search_query)
 
 if __name__ == "__main__":
     app.run(debug=True)
