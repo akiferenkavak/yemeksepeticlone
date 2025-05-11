@@ -165,3 +165,21 @@ class DeliveryPerson(db.Model):
     def __repr__(self):
         return f'<DeliveryPerson {self.id} - {self.user.name}>'
     
+
+class CreditCard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    card_number = db.Column(db.String(255), nullable=False)  # Gerçek uygulamada şifrelenir
+    last_four = db.Column(db.String(4), nullable=False)
+    expiry_month = db.Column(db.String(2), nullable=False)
+    expiry_year = db.Column(db.String(2), nullable=False)
+    cardholder_name = db.Column(db.String(100), nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Kullanıcı ile ilişki
+    user = db.relationship('User', backref='credit_cards')
+    
+    def _repr_(self):
+        return f'<CreditCard {self.id} - {self.last_four}>'
+    
