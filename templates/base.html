@@ -14,11 +14,14 @@
             <a href="/">Ana Sayfa</a>
             
             {% if session.logged_in %}
+                {% if session.user_type == 'user' %}
                 <a href="{{ url_for('cart') }}">Sepetim</a>
 
                 <!-- Kullanıcı türüne göre ek menü öğeleri -->
-                {% if session.user_type == 'admin' %}
+                {% elif session.user_type == 'admin' %}
                     <a href="{{ url_for('admin_dashboard') }}">Admin Paneli</a>
+                {% elif session.user_type == 'delivery' %}
+                    <a href="{{ url_for('delivery_dashboard') }}">Kurye Paneli</a>
                 {% elif session.user_type == 'restaurant' %}
                     <a href="{{ url_for('restaurant_dashboard') }}">Restoran Paneli</a>
                 {% endif %}

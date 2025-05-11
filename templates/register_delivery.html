@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Kurye Kaydı{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Kurye Olarak Kayıt Ol</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('register_delivery') }}">
+        <div class="form-group">
+            <label for="full_name">Ad Soyad:</label>
+            <input type="text" name="full_name" id="full_name" required>
+        </div>
+        <div class="form-group">
+            <label for="email">E-posta:</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Şifre:</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Şifre Tekrar:</label>
+            <input type="password" name="confirm_password" id="confirm_password" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">Telefon:</label>
+            <input type="tel" name="phone" id="phone" required>
+        </div>
+        <div class="form-group">
+            <label for="vehicle_type">Araç Tipi:</label>
+            <select name="vehicle_type" id="vehicle_type" required>
+                <option value="">Seçiniz</option>
+                <option value="Motorsiklet">Motorsiklet</option>
+                <option value="Bisiklet">Bisiklet</option>
+                <option value="Araba">Araba</option>
+                <option value="Elektrikli Scooter">Elektrikli Scooter</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="license_plate">Plaka:</label>
+            <input type="text" name="license_plate" id="license_plate" required placeholder="34ABC123">
+            <small class="form-text text-muted">Lütfen geçerli bir plaka numarası girin. Motorsiklet için de geçerlidir.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+    </form>
+
+    <div class="login-link">
+        <p>Zaten hesabınız var mı? <a href="{{ url_for('login') }}">Giriş yapın</a></p>
+    </div>
+</div>
+{% endblock %}
