@@ -1396,5 +1396,57 @@ def status_text(status):
     return texts.get(status, status)
 
 
+@app.route("/delivery/available-orders")
+@login_required
+@delivery_required
+def available_orders():
+    orders = Order.query.filter(
+        Order.status == 'pending',
+        Order.delivery_id == None
+    ).order_by(Order.order_date.desc()).all()
+    
+    return render_template("available_orders.html", orders=orders)
+
+
+@app.route("/delivery/claim-order/<int:order_id>", methods=["POST"])
+@login_required
+@delivery_required
+def claim_order(order_id):
+    order = Order.query.get_or_404(order_id)
+
+    if order.status != "pending" or order.delivery_id is not None:
+        flash("Bu sipariş zaten başkası tarafından alınmış veya uygun değil.", "warning")
+        return redirect(url_for("available_orders"))
+
+    order.delivery_id = session["user_id"]
+    order.status = "delivering"
+
+    db.session.commit()
+    flash("Sipariş başarıyla üzerinize alındı.", "success")
+    return redirect(url_for("delivery_orders"))
+
+
+@app.route("/delivery/complete-order/<int:order_id>", methods=["POST"])
+@login_required
+@delivery_required
+def complete_order(order_id):
+    order = Order.query.get_or_404(order_id)
+
+    if order.delivery_id != session["user_id"]:
+        flash("Bu sipariş size ait değil!", "danger")
+        return redirect(url_for("delivery_orders"))
+
+    if order.status != "delivering":
+        flash("Bu sipariş zaten teslim edilmiş veya iptal edilmiş.", "warning")
+        return redirect(url_for("delivery_orders"))
+
+    order.status = "delivered"
+    db.session.commit()
+    flash("Sipariş teslim edildi olarak işaretlendi.", "success")
+    return redirect(url_for("delivery_orders"))
+
+
+
+
 if __name__ == "__main__":
     app.run(debug=True)
