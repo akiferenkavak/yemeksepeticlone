@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Ana Sayfa{% endblock %}
+
+{% block content %}
+<h2>Hoş geldiniz!</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="filter-container">
+    <h3>Restoranları Filtrele</h3>
+    <form method="GET" action="{{ url_for('home') }}" class="filter-form">
+        <div class="form-group">
+            <label for="cuisine">Mutfak Türü:</label>
+            <select name="cuisine" id="cuisine" class="form-control">
+                <option value="all" {% if current_cuisine == 'all' %}selected{% endif %}>Tümü</option>
+                {% for cuisine in cuisine_types %}
+                    <option value="{{ cuisine }}" {% if current_cuisine == cuisine %}selected{% endif %}>{{ cuisine }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="rating">Minimum Puan:</label>
+            <select name="rating" id="rating" class="form-control">
+                <option value="all" {% if current_rating == 'all' %}selected{% endif %}>Tümü</option>
+                {% for rating in rating_options %}
+                    <option value="{{ rating }}" {% if current_rating == rating %}selected{% endif %}>{{ rating }}+</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="sort_by">Sıralama:</label>
+            <select name="sort_by" id="sort_by" class="form-control">
+                <option value="rating" {% if current_sort_by == 'rating' %}selected{% endif %}>Puan</option>
+                <option value="name" {% if current_sort_by == 'name' %}selected{% endif %}>İsim</option>
+                <option value="cuisine" {% if current_sort_by == 'cuisine' %}selected{% endif %}>Mutfak Türü</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="sort_dir">Sıralama Yönü:</label>
+            <select name="sort_dir" id="sort_dir" class="form-control">
+                <option value="desc" {% if current_sort_dir == 'desc' %}selected{% endif %}>Azalan</option>
+                <option value="asc" {% if current_sort_dir == 'asc' %}selected{% endif %}>Artan</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Uygula</button>
+    </form>
+</div>
+
+<div class="restaurants-container">
+    <h3>Restoranlar</h3>
+    
+    {% if restaurants %}
+        <div class="restaurant-list">
+            {% for restaurant in restaurants %}
+                <div class="restaurant-card">
+                    <div class="restaurant-image">
+                        {% if restaurant.image_path %}
+                            <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.image_path) }}" alt="{{ restaurant.restaurant_name }}">
+                         {% else %}
+                            <img src="{{ url_for('static', filename='images/restaurants/default.jpg') }}" alt="Default image">
+                         {% endif %}                    </div>
+                    <div class="restaurant-info">
+                        <h4>{{ restaurant.restaurant_name }}</h4>
+                        <p class="cuisine">Mutfak: {{ restaurant.cuisine_type }}</p>
+                        <div class="rating">
+                            <p>Puan: {{ restaurant.rating }}</p>
+                            <div class="stars">
+                                {% for i in range(5) %}
+                                    {% if i < restaurant.rating|int %}
+                                        <span class="star filled">★</span>
+                                    {% elif i < (restaurant.rating|float + 0.5)|int %}
+                                        <span class="star half-filled">★</span>
+                                    {% else %}
+                                        <span class="star">☆</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-primary">Menüyü Gör</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Henüz onaylanmış restoran bulunmamaktadır.</p>
+    {% endif %}
+</div>
+{% endblock %}

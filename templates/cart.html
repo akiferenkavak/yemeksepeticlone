@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Sepetim{% endblock %}
+
+{% block content %}
+<h2>Sepetim</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{% if cart and items %}
+    <div class="cart-container">
+        <div class="cart-header">
+            <h3>{{ restaurant.restaurant_name }} Siparişi</h3>
+            <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-outline">Menüye Dön</a>
+        </div>
+        
+        <div class="cart-items">
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Ürün</th>
+                        <th>Fiyat</th>
+                        <th>Adet</th>
+                        <th>Toplam</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td>{{ item.menu_item.item_name }}</td>
+                            <td>{{ "%.2f"|format(item.menu_item.price) }} TL</td>
+                            <td>
+                                <form action="{{ url_for('update_cart_item', item_id=item.id) }}" method="POST" class="quantity-form">
+                                    <div class="quantity-control inline">
+                                        <button type="button" class="quantity-btn minus">-</button>
+                                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="10" class="quantity-input" onchange="this.form.submit()">
+                                        <button type="button" class="quantity-btn plus">+</button>
+                                    </div>
+                                </form>
+                            </td>
+                            <td>{{ "%.2f"|format(item.item_total) }} TL</td>
+                            <td>
+                                <a href="{{ url_for('remove_cart_item', item_id=item.id) }}" class="btn btn-danger btn-sm">Sil</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-right"><strong>Toplam Tutar:</strong></td>
+                        <td><strong>{{ "%.2f"|format(total) }} TL</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="cart-actions">
+            <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-large">Siparişi Tamamla</a>
+        </div>
+    </div>
+{% else %}
+    <div class="empty-cart">
+        <div class="empty-cart-icon">🛒</div>
+        <p>Sepetinizde henüz ürün bulunmamaktadır.</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary">Restoranları Keşfet</a>
+    </div>
+{% endif %}
+
+<script>
+    // Quantity control buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const minusButtons = document.querySelectorAll('.quantity-btn.minus');
+        const plusButtons = document.querySelectorAll('.quantity-btn.plus');
+        
+        minusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('.quantity-input');
+                let value = parseInt(input.value);
+                if (value > 1) {
+                    input.value = value - 1;
+                    this.closest('form').submit();
+                }
+            });
+        });
+        
+        plusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('.quantity-input');
+                let value = parseInt(input.value);
+                if (value < 10) {
+                    input.value = value + 1;
+                    this.closest('form').submit();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

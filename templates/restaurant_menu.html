@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}{{ restaurant.restaurant_name }} Menü{% endblock %}
+
+{% block content %}
+<div class="restaurant-header">
+    <div class="restaurant-banner">
+        {% if restaurant.image_path %}
+            <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.image_path) }}" alt="{{ restaurant.restaurant_name }}">
+        {% else %}
+            <img src="{{ url_for('static', filename='images/restaurants/default.jpg') }}" alt="Default image">
+        {% endif %}
+        <div class="restaurant-overlay">
+            <h2>{{ restaurant.restaurant_name }}</h2>
+            <div class="restaurant-meta">
+                <span class="cuisine-type">{{ restaurant.cuisine_type }}</span>
+                <div class="rating-display">
+                    <span class="rating-value">{{ restaurant.rating }}</span>
+                    <div class="stars">
+                        {% for i in range(5) %}
+                            {% if i < restaurant.rating|int %}
+                                <span class="star filled">★</span>
+                            {% elif i < (restaurant.rating|float + 0.5)|int %}
+                                <span class="star half-filled">★</span>
+                            {% else %}
+                                <span class="star">☆</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Menü Kısmı (önce) -->
+<div class="menu-container">
+    <h3>Menü</h3>
+    
+    {% if menu_items %}
+        <div class="menu-items">
+            {% for item in menu_items %}
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h4>{{ item.item_name }}</h4>
+                        <p class="description">{{ item.description }}</p>
+                        <p class="price">{{ "%.2f"|format(item.price) }} TL</p>
+                        
+                        <!-- Menü öğesi değerlendirme -->
+                        <div class="menu-item-rating">
+                            {% if item.avg_rating %}
+                                <div class="item-stars">
+                                    {% for i in range(5) %}
+                                        {% if i < item.avg_rating|int %}
+                                            <span class="star filled small">★</span>
+                                        {% elif i < (item.avg_rating|float + 0.5)|int %}
+                                            <span class="star half-filled small">★</span>
+                                        {% else %}
+                                            <span class="star small">☆</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="avg-rating">({{ item.avg_rating }})</span>
+                                </div>
+                            {% endif %}
+                            
+                            {% if session.logged_in and session.user_type == 'user' %}
+                                <form class="item-rating-form" action="{{ url_for('rate_menu_item', item_id=item.id) }}" method="POST">
+                                    <div class="item-rating-stars">
+                                        <input type="hidden" name="menu_id" value="{{ item.id }}">
+                                        {% set user_rating = user_menu_ratings.get(item.id, 0) %}
+                                        <input type="radio" id="item{{ item.id }}_star5" name="rating" value="5" {% if user_rating == 5 %}checked{% endif %}><label for="item{{ item.id }}_star5">★</label>
+                                        <input type="radio" id="item{{ item.id }}_star4" name="rating" value="4" {% if user_rating == 4 %}checked{% endif %}><label for="item{{ item.id }}_star4">★</label>
+                                        <input type="radio" id="item{{ item.id }}_star3" name="rating" value="3" {% if user_rating == 3 %}checked{% endif %}><label for="item{{ item.id }}_star3">★</label>
+                                        <input type="radio" id="item{{ item.id }}_star2" name="rating" value="2" {% if user_rating == 2 %}checked{% endif %}><label for="item{{ item.id }}_star2">★</label>
+                                        <input type="radio" id="item{{ item.id }}_star1" name="rating" value="1" {% if user_rating == 1 %}checked{% endif %}><label for="item{{ item.id }}_star1">★</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-sm">{% if user_rating > 0 %}Güncelle{% else %}Puan Ver{% endif %}</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if session.logged_in and session.user_type == 'user' %}
+                        <div class="add-to-cart">
+                            <form action="{{ url_for('add_to_cart') }}" method="POST">
+                                <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                <div class="quantity-control">
+                                    <button type="button" class="quantity-btn minus">-</button>
+                                    <input type="number" name="quantity" value="1" min="1" max="10" class="quantity-input">
+                                    <button type="button" class="quantity-btn plus">+</button>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Sepete Ekle</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="no-items">Bu restoranda henüz menü öğesi bulunmamaktadır.</p>
+    {% endif %}
+</div>
+
+<!-- Değerlendirme Bölümü (sonra - menünün altında) -->
+<div class="review-section">
+    <h3>Değerlendirmeler</h3>
+    
+    <!-- Giriş yapmış müşteriler için değerlendirme formu -->
+    {% if session.logged_in and session.user_type == 'user' %}
+        <div class="review-form">
+            <h4>Bu Restoranı Değerlendir</h4>
+            <form action="{{ url_for('add_restaurant_review', restaurant_id=restaurant.id) }}" method="POST">
+                <div class="rating-input">
+                    <p>Puanınız:</p>
+                    <div class="star-rating">
+                        {% set user_restaurant_rating = user_restaurant_review.rating if user_restaurant_review else 0 %}
+                        <input type="radio" id="star5" name="rating" value="5" {% if user_restaurant_rating == 5 %}checked{% endif %} required><label for="star5">★</label>
+                        <input type="radio" id="star4" name="rating" value="4" {% if user_restaurant_rating == 4 %}checked{% endif %}><label for="star4">★</label>
+                        <input type="radio" id="star3" name="rating" value="3" {% if user_restaurant_rating == 3 %}checked{% endif %}><label for="star3">★</label>
+                        <input type="radio" id="star2" name="rating" value="2" {% if user_restaurant_rating == 2 %}checked{% endif %}><label for="star2">★</label>
+                        <input type="radio" id="star1" name="rating" value="1" {% if user_restaurant_rating == 1 %}checked{% endif %}><label for="star1">★</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Yorumunuz:</label>
+                    <textarea name="comment" id="comment" rows="3" placeholder="Bu restoran hakkında düşüncelerinizi yazın...">{{ user_restaurant_review.comment if user_restaurant_review else '' }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">{% if user_restaurant_review %}Güncelle{% else %}Değerlendir{% endif %}</button>
+            </form>
+        </div>
+    {% endif %}
+    
+    <!-- Mevcut değerlendirmeleri göster -->
+    <div class="reviews-list">
+        {% if restaurant_reviews %}
+            {% for review in restaurant_reviews %}
+                <div class="review-item">
+                    <div class="review-header">
+                        <div class="reviewer-info">
+                            <span class="reviewer-name">{{ review.user.name }}</span>
+                            <span class="review-date">{{ review.created_at.strftime('%d.%m.%Y') }}</span>
+                        </div>
+                        <div class="review-rating">
+                            {% for i in range(5) %}
+                                {% if i < review.rating %}
+                                    <span class="star filled">★</span>
+                                {% else %}
+                                    <span class="star">☆</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if review.comment %}
+                        <div class="review-content">
+                            <p>{{ review.comment }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-reviews">Bu restoran için henüz değerlendirme yapılmamış.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Floating Cart -->
+<div id="floatingCart" class="floating-cart" {% if cart_items %}style="display: flex;"{% else %}style="display: none;"{% endif %}>
+    <div class="cart-icon">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="cart-count">{{ cart_count }}</span>
+    </div>
+    <div class="cart-preview">
+        <h4>Sepetiniz</h4>
+        <div class="cart-items-preview">
+            {% if cart_items %}
+                {% for item in cart_items %}
+                    <div class="cart-item-preview">
+                        <span class="item-name">{{ item.menu_item.item_name }}</span>
+                        <span class="item-quantity">x{{ item.quantity }}</span>
+                        <span class="item-price">{{ "%.2f"|format(item.item_total) }} TL</span>
+                    </div>
+                {% endfor %}
+                <div class="cart-total-preview">
+                    <strong>Toplam:</strong> {{ "%.2f"|format(cart_total) }} TL
+                </div>
+            {% else %}
+                <p>Sepetiniz boş.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="cart-action">
+        <a href="{{ url_for('view_cart') }}" class="btn btn-sm btn-primary">Sepete Git</a>
+    </div>
+</div>
+
+<style>
+    /* Floating cart styles */
+    .floating-cart {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        background-color: white;
+        border-radius: 8px;
+        padding: 10px 15px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .cart-icon {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+        font-size: 24px;
+        color: #e74c3c;
+    }
+
+    .cart-count {
+        background-color: #e74c3c;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .cart-preview {
+        margin-right: 15px;
+        max-width: 250px;
+    }
+    
+    .cart-preview h4 {
+        margin: 0 0 5px 0;
+        font-size: 16px;
+    }
+    
+    .cart-items-preview {
+        font-size: 14px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .cart-item-preview {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+    
+    .item-name {
+        flex: 2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .item-quantity {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .item-price {
+        flex: 1;
+        text-align: right;
+    }
+    
+    .cart-total-preview {
+        margin-top: 5px;
+        text-align: right;
+        font-size: 14px;
+    }
+
+    .cart-action .btn {
+        white-space: nowrap;
+    }
+    
+    /* Değerlendirme sistemi stilleri */
+    .review-section {
+        background-color: white;
+        border-radius: 8px;
+        padding: 25px;
+        margin: 20px 0;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .review-form {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .review-form h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .rating-input {
+        margin-bottom: 15px;
+    }
+    
+    .star-rating {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        font-size: 24px;
+    }
+    
+    .star-rating input {
+        display: none;
+    }
+    
+    .star-rating label {
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.3s;
+        padding: 0 2px;
+    }
+    
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label {
+        color: #f1c40f;
+    }
+    
+    .reviews-list {
+        margin-top: 20px;
+    }
+    
+    .review-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .review-item:last-child {
+        border-bottom: none;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .reviewer-name {
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    
+    .review-date {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .review-rating {
+        color: #f1c40f;
+        font-size: 18px;
+    }
+    
+    .review-content {
+        color: #333;
+    }
+    
+    .no-reviews {
+        color: #666;
+        font-style: italic;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    /* Menü öğesi değerlendirme stilleri */
+    .menu-item-rating {
+        display: flex;
+        align-items: center;
+        margin-top: 8px;
+    }
+    
+    .item-stars {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+    
+    .star.small {
+        font-size: 14px;
+    }
+    
+    .avg-rating {
+        font-size: 13px;
+        color: #666;
+        margin-left: 5px;
+    }
+    
+    .item-rating-form {
+        display: flex;
+        align-items: center;
+    }
+    
+    .item-rating-stars {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        font-size: 16px;
+        margin-right: 5px;
+    }
+    
+    .item-rating-stars input {
+        display: none;
+    }
+    
+    .item-rating-stars label {
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.3s;
+        padding: 0 1px;
+    }
+    
+    .item-rating-stars label:hover,
+    .item-rating-stars label:hover ~ label,
+    .item-rating-stars input:checked ~ label {
+        color: #f1c40f;
+    }
+    
+    .btn-sm {
+        padding: 3px 8px;
+        font-size: 12px;
+    }
+    
+    /* Duyarlı tasarım için medya sorguları */
+    @media (max-width: 768px) {
+        .floating-cart {
+            max-width: 280px;
+        }
+        
+        .cart-preview {
+            max-width: 150px;
+        }
+        
+        .review-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .review-rating {
+            margin-top: 5px;
+        }
+        
+        .menu-item-rating {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .item-stars {
+            margin-bottom: 5px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Quantity button event handlers
+        const minusButtons = document.querySelectorAll('.quantity-btn.minus');
+        const plusButtons = document.querySelectorAll('.quantity-btn.plus');
+        const addToCartForms = document.querySelectorAll('.add-to-cart form');
+        const floatingCart = document.getElementById('floatingCart');
+        const cartCount = document.querySelector('.cart-count');
+        
+        minusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('.quantity-input');
+                let value = parseInt(input.value);
+                if (value > 1) {
+                    input.value = value - 1;
+                }
+            });
+        });
+        
+        plusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('.quantity-input');
+                let value = parseInt(input.value);
+                if (value < 10) {
+                    input.value = value + 1;
+                }
+            });
+        });
+        
+        // Show floating cart notification when form is submitted
+        addToCartForms.forEach(form => {
+            form.addEventListener('submit', function() {
+                // We'll let the server handle the cart update
+                // The page will refresh with updated cart info
+            });
+        });
+        
+        // If there's a success flash message about adding to cart, make sure the cart is visible
+        const flashMessages = document.querySelectorAll('.alert-success');
+        flashMessages.forEach(message => {
+            if (message.textContent.includes('sepete eklendi')) {
+                floatingCart.style.display = 'flex';
+            }
+        });
+        
+        // Script for handling auto-submission of menu item ratings
+        const itemRatingForms = document.querySelectorAll('.item-rating-form');
+        
+        itemRatingForms.forEach(form => {
+            const stars = form.querySelectorAll('input[type="radio"]');
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    form.submit();
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Tüm Siparişler{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h2>Tüm Siparişler</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Admin Paneline Dön</a>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters-container">
+        <h3>Filtreler</h3>
+        <form action="{{ url_for('admin_orders') }}" method="GET" class="filters-form">
+            <div class="filter-group">
+                <label for="status">Sipariş Durumu:</label>
+                <select name="status" id="status">
+                    <option value="all" {% if current_status == 'all' %}selected{% endif %}>Tümü</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if current_status == status %}selected{% endif %}>
+                            {{ status|capitalize }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="restaurant_id">Restoran:</label>
+                <select name="restaurant_id" id="restaurant_id">
+                    <option value="all" {% if current_restaurant == 'all' %}selected{% endif %}>Tümü</option>
+                    {% for restaurant in restaurants %}
+                        <option value="{{ restaurant.id }}" {% if current_restaurant|int == restaurant.id %}selected{% endif %}>
+                            {{ restaurant.restaurant_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="sort_by">Sıralama:</label>
+                <select name="sort_by" id="sort_by">
+                    <option value="date" {% if current_sort_by == 'date' %}selected{% endif %}>Tarih</option>
+                    <option value="amount" {% if current_sort_by == 'amount' %}selected{% endif %}>Tutar</option>
+                    <option value="status" {% if current_sort_by == 'status' %}selected{% endif %}>Durum</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="sort_dir">Yön:</label>
+                <select name="sort_dir" id="sort_dir">
+                    <option value="desc" {% if current_sort_dir == 'desc' %}selected{% endif %}>Azalan</option>
+                    <option value="asc" {% if current_sort_dir == 'asc' %}selected{% endif %}>Artan</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Filtrele</button>
+        </form>
+    </div>
+    
+    <!-- Orders Table -->
+    <div class="orders-container">
+        <h3>Siparişler</h3>
+        
+        {% if orders %}
+            <table class="approval-table orders-table">
+                <thead>
+                    <tr>
+                        <th>Sipariş No</th>
+                        <th>Müşteri</th>
+                        <th>Restoran</th>
+                        <th>Tarih</th>
+                        <th>Tutar</th>
+                        <th>Durum</th>
+                        <th>Detaylar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr>
+                            <td data-label="Sipariş No">{{ order.id }}</td>
+                            <td data-label="Müşteri">{{ order.user.name }}</td>
+                            <td data-label="Restoran">{{ order.restaurant.restaurant_name }}</td>
+                            <td data-label="Tarih">{{ order.order_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td data-label="Tutar">{{ "%.2f"|format(order.total_amount) }} TL</td>
+                            <td data-label="Durum">
+                                <span class="order-status status-{{ order.status }}">
+                                    {{ order.status|capitalize }}
+                                </span>
+                            </td>
+                            <td data-label="Detaylar">
+                                <button class="btn btn-primary toggle-details" data-order-id="{{ order.id }}">
+                                    Detaylar
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="order-details" id="details-{{ order.id }}" style="display: none;">
+                            <td colspan="7">
+                                <div class="order-details-container">
+                                    <h4>Sipariş Detayları (#{{ order.id }})</h4>
+                                    <div class="order-address">
+                                        <strong>Teslimat Adresi:</strong>
+                                        <p>{{ order.delivery_address }}</p>
+                                    </div>
+                                    <div class="order-items">
+                                        <strong>Sipariş Öğeleri:</strong>
+                                        <ul>
+                                            {% for item in order.items %}
+                                                <li>
+                                                    {{ item.quantity }}x {{ item.menu_item.item_name }} - 
+                                                    {{ "%.2f"|format(item.price) }} TL
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        <div class="order-total">
+                                            <strong>Toplam:</strong> {{ "%.2f"|format(order.total_amount) }} TL
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Henüz sipariş bulunmuyor.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // JavaScript to toggle order details visibility
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButtons = document.querySelectorAll('.toggle-details');
+        
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const orderId = this.getAttribute('data-order-id');
+                const detailsRow = document.getElementById('details-' + orderId);
+                
+                if (detailsRow.style.display === 'none') {
+                    detailsRow.style.display = 'table-row';
+                    this.textContent = 'Gizle';
+                } else {
+                    detailsRow.style.display = 'none';
+                    this.textContent = 'Detaylar';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

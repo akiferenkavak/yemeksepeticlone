@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Restoran Bilgilerini Düzenle{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Restoran Bilgilerini Düzenle</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form action="{{ url_for('edit_restaurant_profile') }}" method="POST" enctype="multipart/form-data">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="restaurant_name">Restoran Adı</label>
+                    <input type="text" class="form-control" id="restaurant_name" name="restaurant_name" 
+                           value="{{ restaurant.restaurant_name }}" required>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="cuisine_type">Mutfak Türü</label>
+                    <select class="form-control" id="cuisine_type" name="cuisine_type" required>
+                        <option value="Türk Mutfağı" {% if restaurant.cuisine_type == 'Türk Mutfağı' %}selected{% endif %}>Türk Mutfağı</option>
+                        <option value="İtalyan Mutfağı" {% if restaurant.cuisine_type == 'İtalyan Mutfağı' %}selected{% endif %}>İtalyan Mutfağı</option>
+                        <option value="Çin Mutfağı" {% if restaurant.cuisine_type == 'Çin Mutfağı' %}selected{% endif %}>Çin Mutfağı</option>
+                        <option value="Meksika Mutfağı" {% if restaurant.cuisine_type == 'Meksika Mutfağı' %}selected{% endif %}>Meksika Mutfağı</option>
+                        <option value="Japon Mutfağı" {% if restaurant.cuisine_type == 'Japon Mutfağı' %}selected{% endif %}>Japon Mutfağı</option>
+                        <option value="Fast Food" {% if restaurant.cuisine_type == 'Fast Food' %}selected{% endif %}>Fast Food</option>
+                        <option value="Deniz Ürünleri" {% if restaurant.cuisine_type == 'Deniz Ürünleri' %}selected{% endif %}>Deniz Ürünleri</option>
+                        <option value="Tatlı & Pasta" {% if restaurant.cuisine_type == 'Tatlı & Pasta' %}selected{% endif %}>Tatlı & Pasta</option>
+                        <option value="Kahvaltı" {% if restaurant.cuisine_type == 'Kahvaltı' %}selected{% endif %}>Kahvaltı</option>
+                        <option value="Diğer" {% if restaurant.cuisine_type == 'Diğer' %}selected{% endif %}>Diğer</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="restaurant_image">Restoran Resmi</label>
+                    <input type="file" class="form-control" id="restaurant_image" name="restaurant_image" accept="image/*">
+                    <small class="form-text text-muted">Mevcut resim değişmeyecekse boş bırakın.</small>
+                </div>
+                
+                {% if restaurant.image_path %}
+                <div class="mb-3">
+                    <label>Mevcut Resim:</label>
+                    <div class="mt-2">
+                        <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.image_path) }}" 
+                             alt="{{ restaurant.restaurant_name }}" 
+                             class="img-thumbnail" style="max-height: 200px;">
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="form-group mb-3">
+                    <label for="tax_id">Vergi Numarası</label>
+                    <input type="text" class="form-control" id="tax_id" value="{{ restaurant.tax_id }}" disabled>
+                    <small class="form-text text-muted">Vergi numarası değiştirilemez.</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group mb-4">
+            <button type="submit" class="btn btn-primary">Bilgileri Güncelle</button>
+            <a href="{{ url_for('restaurant_dashboard') }}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

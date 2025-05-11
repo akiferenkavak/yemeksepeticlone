@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}YemekSepeti{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Added Font Awesome for cart icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <h1><a href="/">YemekSepeti</a></h1>
+        <nav>
+            <a href="/">Ana Sayfa</a>
+            
+            {% if session.logged_in %}
+                <!-- Kullanıcı türüne göre ek menü öğeleri -->
+                {% if session.user_type == 'admin' %}
+                    <a href="{{ url_for('admin_dashboard') }}">Admin Paneli</a>
+                {% elif session.user_type == 'restaurant' %}
+                    <a href="{{ url_for('restaurant_dashboard') }}">Restoran Paneli</a>
+                {% endif %}
+                
+                <!-- Kullanıcı adını göster ve çıkış seçeneği ekle -->
+                <span class="user-greeting">Merhaba, {{ session.name }}</span>
+                <a href="{{ url_for('logout') }}">Çıkış Yap</a>
+            {% else %}
+                <!-- Giriş yapmamış kullanıcılar için -->
+                <a href="{{ url_for('login') }}">Giriş Yap</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 YemekSepeti Clone</p>
+    </footer>
+</body>
+</html>

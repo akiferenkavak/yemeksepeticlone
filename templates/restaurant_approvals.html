@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Restoran Onay İşlemleri{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h2>Restoran Onay İşlemleri</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Admin Paneline Dön</a>
+    </div>
+    
+    <div class="pending-restaurants">
+        <h3>Onay Bekleyen Restoranlar</h3>
+        
+        {% if restaurant_data %}
+            <table class="approval-table">
+                <thead>
+                    <tr>
+                        <th>Restoran Adı</th>
+                        <th>Sahip</th>
+                        <th>İletişim</th>
+                        <th>Mutfak Türü</th>
+                        <th>Vergi No</th>
+                        <th>Kayıt Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in restaurant_data %}
+                        <tr>
+                            <td data-label="Restoran Adı">{{ item.restaurant.restaurant_name }}</td>
+                            <td data-label="Sahip">{{ item.owner.name }}</td>
+                            <td data-label="İletişim">
+                                <strong>E-posta:</strong> {{ item.owner.email }}<br>
+                                <strong>Telefon:</strong> {{ item.owner.phone }}<br>
+                                <strong>Adres:</strong> {{ item.owner.address }}
+                            </td>
+                            <td data-label="Mutfak Türü">{{ item.restaurant.cuisine_type }}</td>
+                            <td data-label="Vergi No">{{ item.restaurant.tax_id }}</td>
+                            <td data-label="Kayıt Tarihi">{{ item.restaurant.created_at.strftime('%d.%m.%Y') }}</td>
+                            <td data-label="İşlemler" class="action-buttons">
+                                <form action="{{ url_for('restaurant_action', restaurant_id=item.restaurant.id) }}" method="POST">
+                                    <button type="submit" name="action" value="approve" class="btn btn-success">Onayla</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger" onclick="return confirm('Bu restoranı silmek istediğinize emin misiniz?');">Reddet</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Onay bekleyen hiç restoran bulunmuyor.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Restoran Kaydı{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Restoran Olarak Kayıt Ol</h2>
+    
+    <!-- Flash mesajlarını göster -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('register_restaurant') }}">
+        <div class="form-group">
+            <label for="restaurant_name">Restoran Adı:</label>
+            <input type="text" name="restaurant_name" id="restaurant_name" required>
+        </div>
+        <div class="form-group">
+            <label for="owner_name">Sahip Ad Soyad:</label>
+            <input type="text" name="owner_name" id="owner_name" required>
+        </div>
+        <div class="form-group">
+            <label for="email">E-posta:</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Şifre:</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Şifre Tekrar:</label>
+            <input type="password" name="confirm_password" id="confirm_password" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">Telefon:</label>
+            <input type="tel" name="phone" id="phone" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Restoran Adresi:</label>
+            <textarea name="address" id="address" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="cuisine_type">Mutfak Türü:</label>
+            <select name="cuisine_type" id="cuisine_type" required>
+                <option value="">Seçiniz</option>
+                <option value="turk">Türk Mutfağı</option>
+                <option value="italyan">İtalyan Mutfağı</option>
+                <option value="uzakdogu">Uzak Doğu Mutfağı</option>
+                <option value="fast_food">Fast Food</option>
+                <option value="diger">Diğer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="tax_id">Vergi Numarası:</label>
+            <input type="text" name="tax_id" id="tax_id" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+    </form>
+    
+    <div class="login-link">
+        <p>Zaten hesabınız var mı? <a href="{{ url_for('login') }}">Giriş yapın</a></p>
+    </div>
+</div>
+{% endblock %}

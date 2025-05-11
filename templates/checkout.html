@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Siparişi Tamamla{% endblock %}
+
+{% block content %}
+<div class="checkout-container">
+    <h2>Siparişi Tamamla</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="checkout-content">
+        <div class="order-summary">
+            <h3>Sipariş Özeti</h3>
+            <div class="restaurant-info">
+                <h4>{{ restaurant.restaurant_name }}</h4>
+            </div>
+            
+            <div class="order-items">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>Ürün</th>
+                            <th>Adet</th>
+                            <th>Fiyat</th>
+                            <th>Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td>{{ item.menu_item.item_name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ "%.2f"|format(item.menu_item.price) }} TL</td>
+                                <td>{{ "%.2f"|format(item.item_total) }} TL</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-right"><strong>Toplam Tutar:</strong></td>
+                            <td><strong>{{ "%.2f"|format(total) }} TL</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <div class="delivery-info">
+            <h3>Teslimat Bilgileri</h3>
+            <form action="{{ url_for('place_order') }}" method="POST">
+                <div class="form-group">
+                    <label for="address">Teslimat Adresi:</label>
+                    <textarea name="address" id="address" rows="3" required>{{ session.get('address', '') }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment_method">Ödeme Yöntemi:</label>
+                    <select name="payment_method" id="payment_method" required>
+                        <option value="cash">Kapıda Ödeme</option>
+                        <option value="credit_card">Kredi Kartı</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Sipariş Notu (İsteğe Bağlı):</label>
+                    <textarea name="notes" id="notes" rows="2"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-large">Siparişi Onayla</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="back-link">
+        <a href="{{ url_for('view_cart') }}" class="btn btn-secondary">← Sepete Dön</a>
+    </div>
+</div>
+
+<style>
+    .checkout-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .checkout-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 20px;
+    }
+    
+    .order-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .order-table th, .order-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+    
+    .back-link {
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 768px) {
+        .checkout-content {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

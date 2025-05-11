@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Menü Ögesi Düzenle{% endblock %}
+
+{% block content %}
+<div class="edit-menu-item">
+    <h2>Menü Ögesi Düzenle</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('menu_management') }}" class="btn btn-secondary">← Menü Yönetimine Dön</a>
+    </div>
+    
+    <div class="edit-form">
+        <form method="POST" action="{{ url_for('edit_menu_item', item_id=menu_item.id) }}">
+            <div class="form-group">
+                <label for="item_name">Ürün Adı:</label>
+                <input type="text" name="item_name" id="item_name" value="{{ menu_item.item_name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Açıklama:</label>
+                <textarea name="description" id="description" rows="3">{{ menu_item.description }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="price">Fiyat (TL):</label>
+                <input type="number" name="price" id="price" step="0.01" min="0" value="{{ "%.2f"|format(menu_item.price) }}" required>
+            </div>
+            <div class="form-group">
+                <label for="is_available">Durum:</label>
+                <select name="is_available" id="is_available">
+                    <option value="True" {% if menu_item.is_available %}selected{% endif %}>Aktif</option>
+                    <option value="False" {% if not menu_item.is_available %}selected{% endif %}>Pasif</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Güncelle</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .edit-menu-item {
+        background-color: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .edit-form {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}

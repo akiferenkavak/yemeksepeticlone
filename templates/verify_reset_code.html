@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Şifre Sıfırlama Kodunu Doğrulayın</h2>
+    <p>{{ email }} adresine gönderilen 6 haneli şifre sıfırlama kodunu girin.</p>
+    <form method="POST">
+        <div class="form-group">
+            <label for="reset_code">Şifre Sıfırlama Kodu</label>
+            <input type="text" class="form-control" id="reset_code" name="reset_code" required pattern="[0-9]{6}" title="6 haneli sayısal kod">
+        </div>
+        <button type="submit" class="btn btn-primary">Kodu Doğrula</button>
+    </form>
+</div>
+{% endblock %}
