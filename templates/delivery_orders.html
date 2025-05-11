@@ -25,7 +25,15 @@
                         <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ order.total_amount }}₺</td>
                         <td>{{ order.delivery_address }}</td>
-                        <td>{{ order.status }}</td>
+                        <td>
+                            {% if order.status == 'delivering' %}
+                                <form action="{{ url_for('complete_order', order_id=order.id) }}" method="post">
+                                    <button class="btn btn-sm btn-primary">Teslim Et</button>
+                                </form>
+                            {% else %}
+                                {{ order.status }}
+                            {% endif %}
+                         </td>
                     </tr>
                 {% endfor %}
             </tbody>

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Teslim Edilmeyi Bekleyen Siparişler{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Uygun Siparişler</h2>
+
+    {% if orders %}
+        <table class="table mt-3">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Restoran</th>
+                    <th>Adres</th>
+                    <th>Tarih</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.restaurant.restaurant_name }}</td>
+                    <td>{{ order.delivery_address }}</td>
+                    <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <form action="{{ url_for('claim_order', order_id=order.id) }}" method="post">
+                            <button class="btn btn-sm btn-success">Siparişi Üstlen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Şu anda teslim edilmeyi bekleyen sipariş bulunmamaktadır.</p>
+    {% endif %}
+</div>
+{% endblock %}
