@@ -44,6 +44,7 @@ class Menu(db.Model):
     description = db.Column(db.Text, nullable=True)
     price = db.Column(db.Float, nullable=False)
     is_available = db.Column(db.Boolean, default=True)
+    category = db.Column(db.String(50), nullable=False, default = "diğer")  # e.g., 'appetizer', 'main course', 'dessert'
     
     restaurant = db.relationship('Restaurant', backref='menu_items')
     

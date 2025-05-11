@@ -905,6 +905,9 @@ def menu_management():
 @login_required
 @restaurant_required
 def add_menu_item():
+    # Debug için form verilerini yazdır
+    print("FORM DATA:", request.form)
+    
     # Get the restaurant associated with the logged-in user
     restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
     
@@ -916,6 +919,8 @@ def add_menu_item():
     item_name = request.form.get('item_name')
     description = request.form.get('description')
     price = request.form.get('price')
+    # Kategori bilgisini doğru şekilde al
+    category = request.form.get('category')
     is_available = request.form.get('is_available') == 'True'
     
     # Create new menu item
@@ -924,6 +929,7 @@ def add_menu_item():
         item_name=item_name,
         description=description,
         price=float(price),
+        category=category,  # Kategori bilgisini kaydet
         is_available=is_available
     )
     
@@ -942,6 +948,10 @@ def add_menu_item():
 @login_required
 @restaurant_required
 def edit_menu_item(item_id):
+    # Debug için form verilerini yazdır (POST isteği olduğunda)
+    if request.method == "POST":
+        print("EDIT FORM DATA:", request.form)
+    
     # Get the restaurant associated with the logged-in user
     restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
     
@@ -962,6 +972,8 @@ def edit_menu_item(item_id):
         menu_item.item_name = request.form.get('item_name')
         menu_item.description = request.form.get('description')
         menu_item.price = float(request.form.get('price'))
+        # Kategori bilgisini güncelle
+        menu_item.category = request.form.get('category')
         menu_item.is_available = request.form.get('is_available') == 'True'
         
         try:
