@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Restaurant, Order, OrderItem, Menu, MenuItem, Cart, CartItem, RestaurantReview, MenuItemReview, DeliveryPerson
+from models import db, User, Restaurant, Order, OrderItem, Menu, MenuItem, Cart, CartItem, RestaurantReview, MenuItemReview, DeliveryPerson, CreditCard
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from datetime import datetime, timezone, timedelta
@@ -1446,6 +1446,121 @@ def complete_order(order_id):
     return redirect(url_for("delivery_orders"))
 
 
+# Kredi Kartları sayfası
+@app.route("/credit-cards")
+@login_required
+def credit_cards():
+    if session['user_type'] != 'user':
+        flash('Bu sayfaya erişmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Kullanıcının kredi kartlarını getir
+    user_cards = CreditCard.query.filter_by(user_id=session['user_id']).all()
+    
+    # Yıl bilgisini template'e gönder (kart ekleme formu için)
+    current_year = datetime.now().year
+    
+    return render_template(
+        "credit_cards.html",
+        credit_cards=user_cards,
+        current_year=current_year
+    )
+
+# Kredi kartı ekleme
+@app.route("/add-credit-card", methods=["POST"])
+@login_required
+def add_credit_card():
+    if session['user_type'] != 'user':
+        flash('Bu işlemi gerçekleştirmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Form verilerini al
+    card_number = request.form.get('card_number').replace(" ", "")  # Boşlukları kaldır
+    expiry_month = request.form.get('expiry_month')
+    expiry_year = request.form.get('expiry_year')
+    cvv = request.form.get('cvv')  # Güvenlik için veritabanında saklanmaz
+    cardholder_name = request.form.get('cardholder_name')
+    
+    # Basit doğrulamalar
+    if len(card_number) < 13 or len(card_number) > 19:
+        flash('Geçersiz kart numarası.', 'danger')
+        return redirect(url_for('credit_cards'))
+    
+    # Son 4 haneyi al
+    last_four = card_number[-4:]
+    
+    # Aynı kart var mı kontrol et
+    existing_card = CreditCard.query.filter_by(
+        user_id=session['user_id'],
+        last_four=last_four,
+        expiry_month=expiry_month,
+        expiry_year=expiry_year
+    ).first()
+    
+    if existing_card:
+        flash('Bu kart zaten kayıtlı.', 'warning')
+        return redirect(url_for('credit_cards'))
+    
+    # İlk kart mı kontrol et (varsayılan olarak ayarlamak için)
+    is_first_card = CreditCard.query.filter_by(user_id=session['user_id']).count() == 0
+    
+    # Yeni kredi kartını oluştur
+    # Gerçek uygulamada kart numarası şifrelenir!
+    new_card = CreditCard(
+        user_id=session['user_id'],
+        card_number=card_number,  # Üretim ortamında asla tam kart numarası saklanmamalı
+        last_four=last_four,
+        expiry_month=expiry_month,
+        expiry_year=expiry_year,
+        cardholder_name=cardholder_name,
+        is_default=is_first_card
+    )
+    
+    try:
+        db.session.add(new_card)
+        db.session.commit()
+        flash('Kredi kartı başarıyla eklendi.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Kart eklenirken bir hata oluştu: {str(e)}', 'danger')
+    
+    return redirect(url_for('credit_cards'))
+
+# Kredi kartı silme
+@app.route("/delete-credit-card/<int:card_id>", methods=["POST"])
+@login_required
+def delete_credit_card(card_id):
+    if session['user_type'] != 'user':
+        flash('Bu işlemi gerçekleştirmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Kartı bul
+    card = CreditCard.query.get_or_404(card_id)
+    
+    # Kartın bu kullanıcıya ait olduğunu doğrula
+    if card.user_id != session['user_id']:
+        flash('Bu işlemi gerçekleştirmek için yetkiniz yok.', 'danger')
+        return redirect(url_for('credit_cards'))
+    
+    # Silinen kart varsayılan ise ve başka kart varsa, yeni varsayılan belirle
+    was_default = card.is_default
+    
+    try:
+        db.session.delete(card)
+        
+        if was_default:
+            # Başka kart var mı kontrol et
+            remaining_card = CreditCard.query.filter_by(user_id=session['user_id']).first()
+            if remaining_card:
+                remaining_card.is_default = True
+        
+        db.session.commit()
+        flash('Kredi kartı başarıyla silindi.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Kart silinirken bir hata oluştu: {str(e)}', 'danger')
+    
+    return redirect(url_for('credit_cards'))
 
 
 if __name__ == "__main__":

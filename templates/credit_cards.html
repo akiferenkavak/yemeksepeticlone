@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Kredi Kartlarım{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Kredi Kartlarım</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="card-management">
+        <div class="row">
+            <!-- Kredi Kartı Ekleme Formu -->
+            <div class="col-md-6">
+                <div class="add-card-section">
+                    <h3>Yeni Kredi Kartı Ekle</h3>
+                    <form action="{{ url_for('add_credit_card') }}" method="POST">
+                        <div class="form-group">
+                            <label for="card_number">Kart Numarası:</label>
+                            <input type="text" name="card_number" id="card_number" class="form-control" placeholder="XXXX XXXX XXXX XXXX" maxlength="19" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label for="expiry_month">Son Kullanma Tarihi:</label>
+                                <div class="d-flex">
+                                    <select name="expiry_month" id="expiry_month" class="form-control" required>
+                                        <option value="">Ay</option>
+                                        {% for month in range(1, 13) %}
+                                            <option value="{{ '%02d' % month }}">{{ '%02d' % month }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <span class="mx-2">/</span>
+                                    <select name="expiry_year" id="expiry_year" class="form-control" required>
+                                        <option value="">Yıl</option>
+                                        {% for year in range(current_year, current_year + 20) %}
+                                            <option value="{{ year % 100 }}">{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group col">
+                                <label for="cvv">CVV:</label>
+                                <input type="text" name="cvv" id="cvv" class="form-control" placeholder="XXX" maxlength="3" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cardholder_name">Kart Üzerindeki İsim:</label>
+                            <input type="text" name="cardholder_name" id="cardholder_name" class="form-control" placeholder="AD SOYAD" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Kartı Ekle</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Kayıtlı Kredi Kartları -->
+            <div class="col-md-6">
+                <div class="saved-cards-section">
+                    <h3>Kayıtlı Kartlarım</h3>
+                    
+                    {% if credit_cards %}
+                        <div class="card-list">
+                            {% for card in credit_cards %}
+                                <div class="credit-card">
+                                    <div class="card-header">
+                                        <div class="card-type">
+                                            {% if card.card_number.startswith('4') %}
+                                                <i class="fab fa-cc-visa"></i>
+                                            {% elif card.card_number.startswith('5') %}
+                                                <i class="fab fa-cc-mastercard"></i>
+                                            {% elif card.card_number.startswith('3') %}
+                                                <i class="fab fa-cc-amex"></i>
+                                            {% else %}
+                                                <i class="far fa-credit-card"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-actions">
+                                            <form action="{{ url_for('delete_credit_card', card_id=card.id) }}" method="POST" onsubmit="return confirm('Bu kredi kartını silmek istediğinize emin misiniz?');">
+                                                <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="card-number">**** **** **** {{ card.last_four }}</div>
+                                        <div class="card-footer">
+                                            <div class="card-holder">{{ card.cardholder_name }}</div>
+                                            <div class="card-expiry">{{ card.expiry_month }}/{{ card.expiry_year }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-cards">Henüz kaydedilmiş kredi kartınız bulunmamaktadır.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-management {
+        margin-top: 30px;
+    }
+    
+    .add-card-section,
+    .saved-cards-section {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .add-card-section h3,
+    .saved-cards-section h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #e74c3c;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 1em;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .d-flex {
+        display: flex;
+        align-items: center;
+    }
+    
+    .mx-2 {
+        margin: 0 10px;
+    }
+    
+    /* Credit Card Styles */
+    .card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .credit-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header {
+        background-color: #e74c3c;
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .card-type i {
+        font-size: 24px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .card-number {
+        font-size: 18px;
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+    }
+    
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #555;
+    }
+    
+    .no-cards {
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        font-style: italic;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .row {
+            flex-direction: column;
+        }
+        
+        .col-md-6 {
+            width: 100%;
+        }
+    }
+</style>
+
+<!-- Font Awesome for card icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+<script>
+    // Format credit card number with spaces
+    document.addEventListener('DOMContentLoaded', function() {
+        const cardNumberInput = document.getElementById('card_number');
+        
+        cardNumberInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s+/g, '');
+            
+            // Add a space after every 4 digits
+            if (value.length > 0) {
+                value = value.match(new RegExp('.{1,4}', 'g')).join(' ');
+            }
+            
+            e.target.value = value;
+        });
+    });
+</script>
+{% endblock %}

@@ -16,8 +16,7 @@
             {% if session.logged_in %}
                 {% if session.user_type == 'user' %}
                 <a href="{{ url_for('cart') }}">Sepetim</a>
-
-                <!-- Kullanıcı türüne göre ek menü öğeleri -->
+                <a href="{{ url_for('credit_cards') }}">Kredi Kartlarım</a>
                 {% elif session.user_type == 'admin' %}
                     <a href="{{ url_for('admin_dashboard') }}">Admin Paneli</a>
                 {% elif session.user_type == 'delivery' %}
