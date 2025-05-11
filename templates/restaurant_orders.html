@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Restoran Siparişleri - {{ restaurant_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ restaurant_name }} - Siparişleriniz</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="mb-3">
+        <a href="{{ url_for('restaurant_dashboard') }}" class="btn btn-secondary">← Restoran Paneline Dön</a>
+    </div>
+
+    {% if orders %}
+        <div class="accordion" id="ordersAccordion">
+            {% for order in orders %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-{{ order.id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ order.id }}" aria-expanded="false" aria-controls="collapse-{{ order.id }}">
+                        <strong>Sipariş ID: {{ order.id }}</strong> &nbsp;-&nbsp; 
+                        Tarih: {{ order.order_date.strftime('%d.%m.%Y %H:%M') }} &nbsp;-&nbsp; 
+                        Müşteri: {{ order.user.name }} &nbsp;-&nbsp; 
+                        Tutar: {{ "%.2f"|format(order.total_amount) }} TL &nbsp;-&nbsp; 
+                        Durum: <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span>
+                    </button>
+                </h2>
+                <div id="collapse-{{ order.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ order.id }}" data-bs-parent="#ordersAccordion">
+                    <div class="accordion-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Sipariş Bilgileri</h5>
+                                <p><strong>Sipariş Tarihi:</strong> {{ order.order_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                                <p><strong>Sipariş Durumu:</strong> <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span></p>
+                                <p><strong>Toplam Tutar:</strong> {{ "%.2f"|format(order.total_amount) }} TL</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Müşteri Bilgileri</h5>
+                                <p><strong>İsim:</strong> {{ order.user.name }}</p>
+                                <p><strong>E-posta:</strong> {{ order.user.email }}</p>
+                                <p><strong>Telefon:</strong> {{ order.user.phone or 'Belirtilmemiş' }}</p>
+                                <p><strong>Teslimat Adresi:</strong> {{ order.delivery_address }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Sipariş Ürünleri</h5>
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Ürün</th>
+                                        <th>Adet</th>
+                                        <th>Birim Fiyat</th>
+                                        <th>Toplam</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.items %}
+                                    <tr>
+                                        <td>{{ item.menu_item.item_name }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>{{ "%.2f"|format(item.price) }} TL</td>
+                                        <td>{{ "%.2f"|format(item.price * item.quantity) }} TL</td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr class="table-active">
+                                        <td colspan="3" class="text-end"><strong>Toplam:</strong></td>
+                                        <td><strong>{{ "%.2f"|format(order.total_amount) }} TL</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Sipariş durumu güncelleme özelliği şu anda devre dışı -->
+                        <div class="mt-4">
+                            <h5>Sipariş Durumu</h5>
+                            <p>Şu anki durum: <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span></p>
+                            <p><small>Not: Sipariş durumu güncelleme özelliği yakında eklenecektir.</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">Henüz hiç sipariş bulunmamaktadır.</div>
+    {% endif %}
+    
+</div>
+{% endblock %}

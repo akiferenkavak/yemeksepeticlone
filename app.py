@@ -1319,5 +1319,70 @@ def search():
         restaurants=all_restaurants,
         search_query=search_query)
 
+
+@app.route("/restaurant/orders")
+@login_required
+@restaurant_required
+def restaurant_orders():
+    """
+    Restoran sahibinin kendi restoranına ait siparişleri görmesini sağlar.
+    """
+    try:
+        # Restoran bilgilerini al
+        restaurant_user_id = session.get('user_id')
+        if not restaurant_user_id:
+            flash('Restoran bilgilerine erişilemedi. Lütfen tekrar giriş yapın.', 'danger')
+            return redirect(url_for('login'))
+
+        restaurant = Restaurant.query.filter_by(user_id=restaurant_user_id).first()
+        if not restaurant:
+            flash('Restoran bulunamadı.', 'danger')
+            return redirect(url_for('restaurant_dashboard'))
+
+        # Siparişleri çek (eager loading ile ilişkili verileri de yükle)
+        orders = db.session.query(Order)\
+                  .filter_by(restaurant_id=restaurant.id)\
+                  .join(User, User.id == Order.user_id)\
+                  .options(db.joinedload(Order.items).joinedload(OrderItem.menu_item))\
+                  .order_by(Order.order_date.desc())\
+                  .all()
+        
+        # Detaylı hata ayıklama için
+        print(f"Bulunan sipariş sayısı: {len(orders)}")
+        
+        return render_template("restaurant_orders.html", orders=orders, restaurant_name=restaurant.restaurant_name)
+
+    except Exception as e:
+        import traceback
+        # Detaylı hata mesajını görüntüle
+        print(f"Hata: {str(e)}")
+        print(traceback.format_exc())  # Hata izini görüntüle
+        flash(f'Siparişleri yüklerken bir hata oluştu: {str(e)}', 'danger')
+        return redirect(url_for('restaurant_dashboard'))
+
+
+@app.template_filter('status_color')
+def status_color(status):
+    colors = {
+        'pending': 'warning',
+        'preparing': 'info',
+        'delivering': 'primary',
+        'delivered': 'success',
+        'cancelled': 'danger'
+    }
+    return colors.get(status, 'secondary')
+
+@app.template_filter('status_text')
+def status_text(status):
+    texts = {
+        'pending': 'Beklemede',
+        'preparing': 'Hazırlanıyor',
+        'delivering': 'Yolda',
+        'delivered': 'Teslim Edildi',
+        'cancelled': 'İptal Edildi'
+    }
+    return texts.get(status, status)
+
+
 if __name__ == "__main__":
     app.run(debug=True)
