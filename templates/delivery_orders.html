@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Siparişlerim{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Size Atanmış Siparişler</h2>
+
+    {% if orders %}
+        <table class="table mt-3">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Restoran</th>
+                    <th>Tarih</th>
+                    <th>Toplam</th>
+                    <th>Adres</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.restaurant.restaurant_name }}</td>
+                        <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ order.total_amount }}₺</td>
+                        <td>{{ order.delivery_address }}</td>
+                        <td>{{ order.status }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Üzerinize atanmış sipariş bulunmamaktadır.</p>
+    {% endif %}
+</div>
+{% endblock %}

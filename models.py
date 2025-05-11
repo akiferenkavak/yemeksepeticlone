@@ -73,8 +73,12 @@ class Order(db.Model):
     delivery_address = db.Column(db.Text, nullable=False)
     
     # Relationships
-    user = db.relationship('User', backref='orders')
+    user = db.relationship('User', foreign_keys=[user_id], backref='orders')
     restaurant = db.relationship('Restaurant', backref='orders')
+
+    #delivery_person edits
+    delivery_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    delivery = db.relationship('User', foreign_keys=[delivery_id], backref='assigned_orders')   
     
     def __repr__(self):
         return f'<Order {self.id} - {self.status}>'
@@ -145,4 +149,18 @@ class MenuItemReview(db.Model):
     
     def __repr__(self):
         return f'<MenuItemReview {self.id} - {self.rating} stars>'
+    
+class DeliveryPerson(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vehicle_type = db.Column(db.String(50), nullable=False)  # e.g., bike, car
+    license_plate = db.Column(db.String(20), unique=True, nullable=False)
+    is_available = db.Column(db.Boolean, default=True)
+    is_approved = db.Column(db.Boolean, default=False)
+    
+    # Relationships
+    user = db.relationship('User', backref='delivery_person')
+    
+    def __repr__(self):
+        return f'<DeliveryPerson {self.id} - {self.user.name}>'
     

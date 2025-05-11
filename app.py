@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Restaurant, Order, OrderItem, Menu, MenuItem, Cart, CartItem, RestaurantReview, MenuItemReview
+from models import db, User, Restaurant, Order, OrderItem, Menu, MenuItem, Cart, CartItem, RestaurantReview, MenuItemReview, DeliveryPerson
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from datetime import datetime, timezone, timedelta
@@ -81,6 +81,69 @@ def restaurant_dashboard():
     # Giriş yapmış restoranın bilgilerini getir
     restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
     return render_template("restaurant_dashboard.html", restaurant=restaurant)
+
+
+# Delivery person access control decorator
+def delivery_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_type' not in session or session['user_type'] != 'delivery':
+            flash('Bu sayfaya erişmek için kurye yetkisi gereklidir', 'danger')
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route("/dashboard/delivery")
+@login_required
+@delivery_required
+def delivery_dashboard():
+    if "user_id" not in session or session.get("user_type") != "delivery":
+        flash("Yetkisiz erişim.", "danger")
+        return redirect(url_for("login"))
+
+    delivery_person = DeliveryPerson.query.filter_by(user_id=session["user_id"]).first()
+
+    return render_template("delivery_dashboard.html", delivery_person=delivery_person)
+
+@app.route("/delivery/orders")
+def delivery_orders():
+    if "user_id" not in session or session.get("user_type") != "delivery":
+        flash("Yetkisiz erişim.", "danger")
+        return redirect(url_for("login"))
+
+    delivery_id = session["user_id"]
+    orders = Order.query.filter_by(delivery_id=delivery_id).order_by(Order.order_date.desc()).all()
+
+    return render_template("delivery_orders.html", orders=orders)
+
+
+@app.route("/delivery/profile/edit", methods=["GET", "POST"])
+def edit_delivery_profile():
+    if "user_id" not in session or session.get("user_type") != "delivery":
+        flash("Yetkisiz erişim.", "danger")
+        return redirect(url_for("login"))
+
+    user = User.query.get(session["user_id"])
+    delivery_person = DeliveryPerson.query.filter_by(user_id=user.id).first()
+
+    if delivery_person is None:
+        flash("Kurye profili bulunamadı. Lütfen yöneticinize başvurun.", "danger")
+        return redirect(url_for("delivery_dashboard"))
+
+    if request.method == "POST":
+        user.name = request.form.get("name")
+        user.email = request.form.get("email")
+        user.phone = request.form.get("phone")
+        delivery_person.vehicle_type = request.form.get("vehicle_type")
+        delivery_person.license_plate = request.form.get("license_plate")
+
+        db.session.commit()
+        flash("Profil bilgileri başarıyla güncellendi.", "success")
+        return redirect(url_for("delivery_dashboard"))
+
+    return render_template("edit_delivery_profile.html", user=user, delivery=delivery_person)
+
+
 
 @app.route("/")
 def home():
@@ -219,6 +282,72 @@ def register_user():
             return redirect(url_for('register_user'))
     
     return render_template("register_user.html")
+
+@app.route("/register/delivery", methods=["GET", "POST"])
+def register_delivery():
+    if request.method == "POST":
+        name = request.form.get("full_name")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+        phone = request.form.get("phone")
+        vehicle_type = request.form.get("vehicle_type")
+        license_plate = request.form.get("license_plate")
+
+        # Form validasyonu
+        if password != confirm_password:
+            flash("Şifreler uyuşmuyor.", "danger")
+            return redirect(url_for("register_delivery"))
+
+        if not vehicle_type:
+            flash("Lütfen araç tipi seçin.", "danger")
+            return redirect(url_for("register_delivery"))
+            
+        if not license_plate:
+            flash("Lütfen plaka numarası girin.", "danger")
+            return redirect(url_for("register_delivery"))
+
+        # Email kontrol
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Bu e-posta adresi zaten kullanılıyor.", "warning")
+            return redirect(url_for("register_delivery"))
+            
+        # Plaka kontrol
+        existing_plate = DeliveryPerson.query.filter_by(license_plate=license_plate).first()
+        if existing_plate:
+            flash("Bu plaka numarası zaten kayıtlı.", "warning")
+            return redirect(url_for("register_delivery"))
+
+        # Kullanıcı oluştur
+        hashed_password = generate_password_hash(password)
+        new_user = User(
+            name=name,
+            email=email,
+            password=hashed_password,
+            phone=phone,
+            user_type="delivery"
+        )
+        db.session.add(new_user)
+        db.session.flush()  # ID almak için önce flush edin
+        
+        # Kurye bilgilerini oluştur
+        new_delivery = DeliveryPerson(
+            user_id=new_user.id,
+            vehicle_type=vehicle_type,
+            license_plate=license_plate,
+            is_available=True,
+            is_approved=False  # Yeni kuryeler onay beklemeli
+        )
+        
+        db.session.add(new_delivery)
+        db.session.commit()
+
+        flash("Kurye kaydınız başarıyla oluşturuldu! Hesabınız onaylandıktan sonra giriş yapabilirsiniz.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("register_delivery.html")
+
 
 # Restoran kaydı
 @app.route("/register/restaurant", methods=["GET", "POST"])
