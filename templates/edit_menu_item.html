@@ -25,6 +25,11 @@
                 <input type="text" name="item_name" id="item_name" value="{{ menu_item.item_name }}" required>
             </div>
             <div class="form-group">
+                <label for="category">Ürün Türü:</label>
+                <input type="text" name="category" id="category" value="{{ menu_item.category }}" required>
+                <small class="form-text text-muted">Örn: Başlangıçlar, Ana Yemekler, İçecekler, Tatlılar</small>
+            </div>
+            <div class="form-group">
                 <label for="description">Açıklama:</label>
                 <textarea name="description" id="description" rows="3">{{ menu_item.description }}</textarea>
             </div>
@@ -60,5 +65,11 @@
         border-radius: 8px;
         margin: 20px 0;
     }
+    
+    .form-text {
+        color: #6c757d;
+        font-size: 85%;
+        margin-top: 4px;
+    }
 </style>
-{% endblock %}
+{% endblock %}

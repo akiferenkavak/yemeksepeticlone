@@ -41,75 +41,91 @@
     {% endif %}
 {% endwith %}
 
-<!-- Menü Kısmı (önce) -->
+<!-- Menü Kısmı (kategori gruplarıyla) -->
 <div class="menu-container">
     <h3>Menü</h3>
     
     {% if menu_items %}
-        <div class="menu-items">
-            {% for item in menu_items %}
-                <div class="menu-item">
-                    <div class="menu-item-info">
-                        <h4>{{ item.item_name }}</h4>
-                        <p class="description">{{ item.description }}</p>
-                        <p class="price">{{ "%.2f"|format(item.price) }} TL</p>
-                        
-                        <!-- Menü öğesi değerlendirme -->
-                        <div class="menu-item-rating">
-                            {% if item.avg_rating %}
-                                <div class="item-stars">
-                                    {% for i in range(5) %}
-                                        {% if i < item.avg_rating|int %}
-                                            <span class="star filled small">★</span>
-                                        {% elif i < (item.avg_rating|float + 0.5)|int %}
-                                            <span class="star half-filled small">★</span>
-                                        {% else %}
-                                            <span class="star small">☆</span>
-                                        {% endif %}
-                                    {% endfor %}
-                                    <span class="avg-rating">({{ item.avg_rating }})</span>
+        <!-- Kategorilere göre menü öğelerini grupla -->
+        {% set categories = {} %}
+        
+        {% for item in menu_items %}
+            {% if item.category not in categories %}
+                {% if categories.update({item.category: []}) %}{% endif %}
+            {% endif %}
+            {% if categories[item.category].append(item) %}{% endif %}
+        {% endfor %}
+        
+        <!-- Her kategori için ayrı bölüm oluştur -->
+        {% for category, items in categories.items() %}
+            <div class="menu-category">
+                <h4 class="category-title">{{ category }}</h4>
+                <div class="menu-items">
+                    {% for item in items %}
+                        <div class="menu-item">
+                            <div class="menu-item-info">
+                                <h4>{{ item.item_name }}</h4>
+                                <p class="description">{{ item.description }}</p>
+                                <p class="price">{{ "%.2f"|format(item.price) }} TL</p>
+                                
+                                <!-- Menü öğesi değerlendirme -->
+                                <div class="menu-item-rating">
+                                    {% if item.avg_rating %}
+                                        <div class="item-stars">
+                                            {% for i in range(5) %}
+                                                {% if i < item.avg_rating|int %}
+                                                    <span class="star filled small">★</span>
+                                                {% elif i < (item.avg_rating|float + 0.5)|int %}
+                                                    <span class="star half-filled small">★</span>
+                                                {% else %}
+                                                    <span class="star small">☆</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <span class="avg-rating">({{ item.avg_rating }})</span>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if session.logged_in and session.user_type == 'user' %}
+                                        <form class="item-rating-form" action="{{ url_for('rate_menu_item', item_id=item.id) }}" method="POST">
+                                            <div class="item-rating-stars">
+                                                <input type="hidden" name="menu_id" value="{{ item.id }}">
+                                                {% set user_rating = user_menu_ratings.get(item.id, 0) %}
+                                                <input type="radio" id="item{{ item.id }}_star5" name="rating" value="5" {% if user_rating == 5 %}checked{% endif %}><label for="item{{ item.id }}_star5">★</label>
+                                                <input type="radio" id="item{{ item.id }}_star4" name="rating" value="4" {% if user_rating == 4 %}checked{% endif %}><label for="item{{ item.id }}_star4">★</label>
+                                                <input type="radio" id="item{{ item.id }}_star3" name="rating" value="3" {% if user_rating == 3 %}checked{% endif %}><label for="item{{ item.id }}_star3">★</label>
+                                                <input type="radio" id="item{{ item.id }}_star2" name="rating" value="2" {% if user_rating == 2 %}checked{% endif %}><label for="item{{ item.id }}_star2">★</label>
+                                                <input type="radio" id="item{{ item.id }}_star1" name="rating" value="1" {% if user_rating == 1 %}checked{% endif %}><label for="item{{ item.id }}_star1">★</label>
+                                            </div>
+                                            <button type="submit" class="btn btn-sm">{% if user_rating > 0 %}Güncelle{% else %}Puan Ver{% endif %}</button>
+                                        </form>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+                            </div>
                             
                             {% if session.logged_in and session.user_type == 'user' %}
-                                <form class="item-rating-form" action="{{ url_for('rate_menu_item', item_id=item.id) }}" method="POST">
-                                    <div class="item-rating-stars">
-                                        <input type="hidden" name="menu_id" value="{{ item.id }}">
-                                        {% set user_rating = user_menu_ratings.get(item.id, 0) %}
-                                        <input type="radio" id="item{{ item.id }}_star5" name="rating" value="5" {% if user_rating == 5 %}checked{% endif %}><label for="item{{ item.id }}_star5">★</label>
-                                        <input type="radio" id="item{{ item.id }}_star4" name="rating" value="4" {% if user_rating == 4 %}checked{% endif %}><label for="item{{ item.id }}_star4">★</label>
-                                        <input type="radio" id="item{{ item.id }}_star3" name="rating" value="3" {% if user_rating == 3 %}checked{% endif %}><label for="item{{ item.id }}_star3">★</label>
-                                        <input type="radio" id="item{{ item.id }}_star2" name="rating" value="2" {% if user_rating == 2 %}checked{% endif %}><label for="item{{ item.id }}_star2">★</label>
-                                        <input type="radio" id="item{{ item.id }}_star1" name="rating" value="1" {% if user_rating == 1 %}checked{% endif %}><label for="item{{ item.id }}_star1">★</label>
-                                    </div>
-                                    <button type="submit" class="btn btn-sm">{% if user_rating > 0 %}Güncelle{% else %}Puan Ver{% endif %}</button>
-                                </form>
+                                <div class="add-to-cart">
+                                    <form action="{{ url_for('add_to_cart') }}" method="POST">
+                                        <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                        <div class="quantity-control">
+                                            <button type="button" class="quantity-btn minus">-</button>
+                                            <input type="number" name="quantity" value="1" min="1" max="10" class="quantity-input">
+                                            <button type="button" class="quantity-btn plus">+</button>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Sepete Ekle</button>
+                                    </form>
+                                </div>
                             {% endif %}
                         </div>
-                    </div>
-                    
-                    {% if session.logged_in and session.user_type == 'user' %}
-                        <div class="add-to-cart">
-                            <form action="{{ url_for('add_to_cart') }}" method="POST">
-                                <input type="hidden" name="menu_item_id" value="{{ item.id }}">
-                                <div class="quantity-control">
-                                    <button type="button" class="quantity-btn minus">-</button>
-                                    <input type="number" name="quantity" value="1" min="1" max="10" class="quantity-input">
-                                    <button type="button" class="quantity-btn plus">+</button>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Sepete Ekle</button>
-                            </form>
-                        </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-            {% endfor %}
-        </div>
+            </div>
+        {% endfor %}
     {% else %}
         <p class="no-items">Bu restoranda henüz menü öğesi bulunmamaktadır.</p>
     {% endif %}
 </div>
 
-<!-- Değerlendirme Bölümü (sonra - menünün altında) -->
+<!-- Değerlendirme Bölümü (menünün altında) -->
 <div class="review-section">
     <h3>Değerlendirmeler</h3>
     
@@ -202,6 +218,19 @@
 </div>
 
 <style>
+    /* Menü kategorisi stilleri */
+    .menu-category {
+        margin-bottom: 30px;
+    }
+    
+    .category-title {
+        color: #333;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e74c3c;
+        margin-bottom: 15px;
+        font-size: 20px;
+    }
+    
     /* Floating cart styles */
     .floating-cart {
         position: fixed;
