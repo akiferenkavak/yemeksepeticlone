@@ -1596,7 +1596,7 @@ def status_text(status):
         'on_delivery': 'Yolda',
         'delivered': 'Teslim Edildi',
         'cancelled': 'İptal Edildi'
-    }.get(status, 'Bilinmiyor')
+    }.get(status, 'Yolda')
 
 app.jinja_env.globals.update(status_color=status_color)
 app.jinja_env.globals.update(status_text=status_text)
