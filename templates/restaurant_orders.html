@@ -80,11 +80,24 @@
                             </table>
                         </div>
                         
-                        <!-- Sipariş durumu güncelleme özelliği şu anda devre dışı -->
                         <div class="mt-4">
-                            <h5>Sipariş Durumu</h5>
-                            <p>Şu anki durum: <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span></p>
-                            <p><small>Not: Sipariş durumu güncelleme özelliği yakında eklenecektir.</small></p>
+                            <h5>Sipariş Durumu Güncelleme</h5>
+                            <form action="{{ url_for('update_order_status', order_id=order.id) }}" method="POST">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <select name="status" class="form-select">
+                                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Beklemede</option>
+                                            <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Hazırlanıyor</option>
+                                            <option value="on_the_way" {% if order.status == 'on_the_way' %}selected{% endif %}>Yolda</option>
+                                            <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
+                                            <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>İptal Edildi</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="submit" class="btn btn-primary">Durumu Güncelle</button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -94,6 +107,30 @@
     {% else %}
         <div class="alert alert-info">Henüz hiç sipariş bulunmamaktadır.</div>
     {% endif %}
-    
 </div>
+
+{% block extra_js %}
+<script>
+    // Sayfa yüklendiğinde çalışacak JavaScript kodları
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bootstrap Accordion için özel işlemler
+        const accordionButtons = document.querySelectorAll('.accordion-button');
+        accordionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const target = document.querySelector(this.dataset.bsTarget);
+                if (target) {
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    this.setAttribute('aria-expanded', !isExpanded);
+                    
+                    if (isExpanded) {
+                        target.classList.remove('show');
+                    } else {
+                        target.classList.add('show');
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}

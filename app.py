@@ -1350,10 +1350,9 @@ def search():
         restaurants=all_restaurants,
         search_query=search_query)
 
-
-@app.route("/restaurant/orders")
-@login_required
-@restaurant_required
+@app.route("/restaurant/orders") 
+@login_required 
+@restaurant_required 
 def restaurant_orders():
     """
     Restoran sahibinin kendi restoranına ait siparişleri görmesini sağlar.
@@ -1364,12 +1363,12 @@ def restaurant_orders():
         if not restaurant_user_id:
             flash('Restoran bilgilerine erişilemedi. Lütfen tekrar giriş yapın.', 'danger')
             return redirect(url_for('login'))
-
+        
         restaurant = Restaurant.query.filter_by(user_id=restaurant_user_id).first()
         if not restaurant:
             flash('Restoran bulunamadı.', 'danger')
             return redirect(url_for('restaurant_dashboard'))
-
+        
         # Siparişleri çek (eager loading ile ilişkili verileri de yükle)
         orders = db.session.query(Order)\
                   .filter_by(restaurant_id=restaurant.id)\
@@ -1377,20 +1376,55 @@ def restaurant_orders():
                   .options(db.joinedload(Order.items).joinedload(OrderItem.menu_item))\
                   .order_by(Order.order_date.desc())\
                   .all()
-        
-        # Detaylı hata ayıklama için
-        print(f"Bulunan sipariş sayısı: {len(orders)}")
-        
+                
         return render_template("restaurant_orders.html", orders=orders, restaurant_name=restaurant.restaurant_name)
-
+    
     except Exception as e:
         import traceback
-        # Detaylı hata mesajını görüntüle
         print(f"Hata: {str(e)}")
-        print(traceback.format_exc())  # Hata izini görüntüle
+        print(traceback.format_exc())
         flash(f'Siparişleri yüklerken bir hata oluştu: {str(e)}', 'danger')
         return redirect(url_for('restaurant_dashboard'))
 
+@app.route("/restaurant/orders/<int:order_id>/update-status", methods=["POST"])
+@login_required
+@restaurant_required
+def update_order_status(order_id):
+    """
+    Sipariş durumunu güncellemek için kullanılır.
+    """
+    try:
+        # Restoran sahibi kontrolü
+        restaurant_user_id = session.get('user_id')
+        restaurant = Restaurant.query.filter_by(user_id=restaurant_user_id).first()
+        
+        if not restaurant:
+            flash('Restoran bilgilerine erişilemedi.', 'danger')
+            return redirect(url_for('restaurant_orders'))
+        
+        # Sipariş kontrolü
+        order = Order.query.filter_by(id=order_id, restaurant_id=restaurant.id).first()
+        
+        if not order:
+            flash('Sipariş bulunamadı veya bu siparişi güncelleme yetkiniz yok.', 'danger')
+            return redirect(url_for('restaurant_orders'))
+        
+        # Durumu güncelle
+        new_status = request.form.get('status')
+        valid_statuses = ['pending', 'preparing', 'on_the_way', 'delivered', 'cancelled']
+        
+        if new_status in valid_statuses:
+            order.status = new_status
+            db.session.commit()
+            flash('Sipariş durumu başarıyla güncellendi.', 'success')
+        else:
+            flash('Geçersiz sipariş durumu.', 'danger')
+        
+        return redirect(url_for('restaurant_orders'))
+    
+    except Exception as e:
+        flash(f'Sipariş durumu güncellenirken bir hata oluştu: {str(e)}', 'danger')
+        return redirect(url_for('restaurant_orders'))
 
 @app.template_filter('status_color')
 def status_color(status):
@@ -1614,6 +1648,35 @@ def user_orders():
         .all()
 
     return render_template("user_orders.html", orders=orders)
+
+
+@app.template_filter('status_text')
+def status_text_filter(status):
+    """
+    Sipariş durumlarını Türkçe metne dönüştürür.
+    """
+    status_dict = {
+        'pending': 'Beklemede',
+        'preparing': 'Hazırlanıyor',
+        'on_the_way': 'Yolda',
+        'delivered': 'Teslim Edildi',
+        'cancelled': 'İptal Edildi'
+    }
+    return status_dict.get(status, 'Yolda')
+
+@app.template_filter('status_color')
+def status_color_filter(status):
+    """
+    Sipariş durumları için Bootstrap renk sınıfları döndürür.
+    """
+    color_dict = {
+        'pending': 'warning',
+        'preparing': 'info',
+        'on_the_way': 'primary',
+        'delivered': 'success',
+        'cancelled': 'danger'
+    }
+    return color_dict.get(status, 'secondary')
 
 
 if __name__ == "__main__":
