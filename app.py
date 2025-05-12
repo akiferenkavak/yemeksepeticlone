@@ -828,17 +828,25 @@ def verify_reset_code():
     
     if not email:
         flash("Geçersiz istek.", "danger")
-        return redirect(url_for("login"))
+        return redirect(url_for('login'))
     
     if request.method == "POST":
         reset_code = request.form.get("reset_code")
         user = User.query.filter_by(email=email, reset_code=reset_code).first()
         
-        if user and user.reset_code_expiry and user.reset_code_expiry > datetime.now(timezone.utc):
-            # Kod geçerli
-            return redirect(url_for("reset_password", email=email, code=reset_code))
-        else:
-            flash("Geçersiz veya süresi dolmuş kod.", "danger")
+        # Ensure reset_code_expiry is timezone-aware
+        now = datetime.now(timezone.utc)
+        
+        if user and user.reset_code_expiry:
+            # Make sure reset_code_expiry is timezone-aware
+            if user.reset_code_expiry.tzinfo is None:
+                user.reset_code_expiry = user.reset_code_expiry.replace(tzinfo=timezone.utc)
+            
+            if user.reset_code_expiry > now:
+                # Kod geçerli
+                return redirect(url_for("reset_password", email=email, code=reset_code))
+        
+        flash("Geçersiz veya süresi dolmuş kod.", "danger")
     
     return render_template("verify_reset_code.html", email=email)
 
@@ -856,8 +864,19 @@ def reset_password():
     
     user = User.query.filter_by(email=email, reset_code=code).first()
     
-    if not user or not user.reset_code_expiry or user.reset_code_expiry < datetime.now(timezone.utc):
-        flash("Geçersiz veya süresi dolmuş kod.", "danger")
+    # Ensure reset_code_expiry is timezone-aware
+    now = datetime.now(timezone.utc)
+    
+    if not user or not user.reset_code_expiry:
+        flash("Geçersiz kod.", "danger")
+        return redirect(url_for("login"))
+    
+    # Make sure reset_code_expiry is timezone-aware
+    if user.reset_code_expiry.tzinfo is None:
+        user.reset_code_expiry = user.reset_code_expiry.replace(tzinfo=timezone.utc)
+    
+    if user.reset_code_expiry < now:
+        flash("Süresi dolmuş kod.", "danger")
         return redirect(url_for("login"))
     
     if request.method == "POST":
