@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı Yönetimi{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h2>Kullanıcı Yönetimi</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Admin Paneline Dön</a>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters-container">
+        <h3>Filtreler</h3>
+        <form action="{{ url_for('admin_users') }}" method="GET" class="filters-form">
+            <div class="filter-group">
+                <label for="user_type">Kullanıcı Tipi:</label>
+                <select name="user_type" id="user_type">
+                    <option value="all" {% if current_user_type == 'all' %}selected{% endif %}>Tümü</option>
+                    <option value="user" {% if current_user_type == 'user' %}selected{% endif %}>Müşteri</option>
+                    <option value="restaurant" {% if current_user_type == 'restaurant' %}selected{% endif %}>Restoran</option>
+                    <option value="delivery" {% if current_user_type == 'delivery' %}selected{% endif %}>Kurye</option>
+                    <option value="admin" {% if current_user_type == 'admin' %}selected{% endif %}>Admin</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="search">Ara:</label>
+                <input type="text" name="search" id="search" value="{{ search_term }}" placeholder="İsim veya email ara...">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Filtrele</button>
+        </form>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="users-container">
+        <h3>Kullanıcılar</h3>
+        
+        {% if users %}
+            <table class="approval-table users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ad Soyad</th>
+                        <th>E-posta</th>
+                        <th>Kullanıcı Tipi</th>
+                        <th>Kayıt Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td data-label="ID">{{ user.id }}</td>
+                            <td data-label="Ad Soyad">{{ user.name }}</td>
+                            <td data-label="E-posta">{{ user.email }}</td>
+                            <td data-label="Kullanıcı Tipi">
+                                {% if user.user_type == 'user' %}
+                                    <span class="badge bg-primary">Müşteri</span>
+                                {% elif user.user_type == 'restaurant' %}
+                                    <span class="badge bg-success">Restoran</span>
+                                {% elif user.user_type == 'delivery' %}
+                                    <span class="badge bg-info">Kurye</span>
+                                {% elif user.user_type == 'admin' %}
+                                    <span class="badge bg-warning">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Kayıt Tarihi">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                            <td data-label="İşlemler">
+                                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirmDelete('{{ user.name }}');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Sil</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Hiç kullanıcı bulunamadı.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function confirmDelete(userName) {
+        return confirm(userName + " isimli kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.");
+    }
+</script>
+{% endblock %}

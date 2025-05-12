@@ -1679,5 +1679,137 @@ def status_color_filter(status):
     return color_dict.get(status, 'secondary')
 
 
+# Admin user management page
+@app.route("/admin/users")
+@login_required
+@admin_required
+def admin_users():
+    # Get filters from query parameters
+    user_type_filter = request.args.get('user_type', 'all')
+    search_term = request.args.get('search', '')
+    
+    # Base query
+    users_query = User.query
+    
+    # Apply filters
+    if user_type_filter != 'all':
+        users_query = users_query.filter(User.user_type == user_type_filter)
+    
+    # Apply search if provided
+    if search_term:
+        search_pattern = f"%{search_term}%"
+        users_query = users_query.filter(
+            or_(
+                User.name.like(search_pattern),
+                User.email.like(search_pattern)
+            )
+        )
+    
+    # Order by ID
+    users_query = users_query.order_by(User.id)
+    
+    # Execute query
+    users = users_query.all()
+    
+    return render_template(
+        "admin_users.html", 
+        users=users,
+        current_user_type=user_type_filter,
+        search_term=search_term
+    )
+
+# Delete user
+@app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_user(user_id):
+    # Prevent self-deletion
+    if user_id == session['user_id']:
+        flash('Kendi hesabınızı silemezsiniz!', 'danger')
+        return redirect(url_for('admin_users'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    try:
+        # Handle user-specific relationships
+        user_type = user.user_type
+        
+        if user_type == 'restaurant':
+            # Delete restaurant and related records
+            restaurant = Restaurant.query.filter_by(user_id=user_id).first()
+            if restaurant:
+                # Delete menu items
+                menu_items = Menu.query.filter_by(restaurant_id=restaurant.id).all()
+                for item in menu_items:
+                    db.session.delete(item)
+                
+                # Delete orders related to this restaurant
+                orders = Order.query.filter_by(restaurant_id=restaurant.id).all()
+                for order in orders:
+                    # Delete order items
+                    order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                    for item in order_items:
+                        db.session.delete(item)
+                    db.session.delete(order)
+                
+                # Delete restaurant reviews
+                reviews = RestaurantReview.query.filter_by(restaurant_id=restaurant.id).all()
+                for review in reviews:
+                    db.session.delete(review)
+                
+                # Delete restaurant record
+                db.session.delete(restaurant)
+        
+        elif user_type == 'delivery':
+            # Delete delivery person record
+            delivery = DeliveryPerson.query.filter_by(user_id=user_id).first()
+            if delivery:
+                db.session.delete(delivery)
+        
+        elif user_type == 'user':
+            # Delete user's orders
+            orders = Order.query.filter_by(user_id=user_id).all()
+            for order in orders:
+                # Delete order items
+                order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                for item in order_items:
+                    db.session.delete(item)
+                db.session.delete(order)
+            
+            # Delete user's cart
+            cart = Cart.query.filter_by(user_id=user_id).first()
+            if cart:
+                # Delete cart items
+                cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+                for item in cart_items:
+                    db.session.delete(item)
+                db.session.delete(cart)
+            
+            # Delete user's reviews
+            reviews = RestaurantReview.query.filter_by(user_id=user_id).all()
+            for review in reviews:
+                db.session.delete(review)
+            
+            menu_reviews = MenuItemReview.query.filter_by(user_id=user_id).all()
+            for review in menu_reviews:
+                db.session.delete(review)
+            
+            # Delete user's credit cards
+            credit_cards = CreditCard.query.filter_by(user_id=user_id).all()
+            for card in credit_cards:
+                db.session.delete(card)
+        
+        # Finally, delete the user
+        db.session.delete(user)
+        db.session.commit()
+        
+        flash(f'Kullanıcı "{user.name}" başarıyla silindi.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Kullanıcı silinirken bir hata oluştu: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_users'))
+
+
 if __name__ == "__main__":
     app.run(debug=True)
