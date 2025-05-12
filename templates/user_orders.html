@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Siparişlerim</h2>
+    {% if orders %}
+        <div class="row">
+            {% for order in orders %}
+            <div class="col-md-12 mb-3">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Sipariş No: {{ order.id }}</span>
+                        <span class="badge bg-{{ status_color(order.status) }}">
+                            {{ status_text(order.status) }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Restoran:</strong> {{ order.restaurant.restaurant_name }}</p>
+                                <p><strong>Tarih:</strong> {{ order.order_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                                <p><strong>Toplam Tutar:</strong> {{ order.total_amount }} TL</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Sipariş İçeriği</h5>
+                                <ul class="list-unstyled">
+                                    {% for item in order.items %}
+                                    <li>
+                                        {{ item.menu_item.item_name }}
+                                        x{{ item.quantity }}
+                                        ({{ item.price }} TL)
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">Henüz hiç siparişiniz bulunmamaktadır.</div>
+    {% endif %}
+</div>
+{% endblock %}

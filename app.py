@@ -1580,6 +1580,40 @@ def delete_credit_card(card_id):
         flash(f'Kart silinirken bir hata oluştu: {str(e)}', 'danger')
     
     return redirect(url_for('credit_cards'))
+def status_color(status):
+    return {
+        'pending': 'warning',
+        'preparing': 'info',
+        'on_delivery': 'primary',
+        'delivered': 'success',
+        'cancelled': 'danger'
+    }.get(status, 'secondary')
+
+def status_text(status):
+    return {
+        'pending': 'Beklemede',
+        'preparing': 'Hazırlanıyor',
+        'on_delivery': 'Yolda',
+        'delivered': 'Teslim Edildi',
+        'cancelled': 'İptal Edildi'
+    }.get(status, 'Bilinmiyor')
+
+app.jinja_env.globals.update(status_color=status_color)
+app.jinja_env.globals.update(status_text=status_text)
+
+
+@app.route("/orders")
+@login_required
+def user_orders():
+    if session['user_type'] != 'user':
+        flash('Bu sayfaya erişmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+
+    orders = Order.query.filter_by(user_id=session['user_id']) \
+        .order_by(Order.order_date.desc()) \
+        .all()
+
+    return render_template("user_orders.html", orders=orders)
 
 
 if __name__ == "__main__":
