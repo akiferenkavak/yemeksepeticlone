@@ -1037,36 +1037,55 @@ def delete_menu_item(item_id):
     
     return redirect(url_for('menu_management'))
 
+
 @app.route("/checkout")
 @login_required
 def checkout():
-    # Get user's cart
     cart = Cart.query.filter_by(user_id=session['user_id']).first()
-    
+
     if not cart or not cart.items:
         flash('Sepetiniz boş.', 'warning')
         return redirect(url_for('home'))
-    
-    # Get cart items with details
+
     items = []
     total = 0
-    
     for cart_item in cart.items:
         menu_item = cart_item.menu_item
         item_total = menu_item.price * cart_item.quantity
         total += item_total
-        
         items.append({
             'id': cart_item.id,
             'menu_item': menu_item,
             'quantity': cart_item.quantity,
             'item_total': item_total
         })
-    
-    # Get restaurant info
+
     restaurant = Restaurant.query.get(cart.restaurant_id)
-    
-    return render_template("checkout.html", cart=cart, items=items, restaurant=restaurant, total=total)
+
+    # Adres işlemleri
+    user = User.query.get(session['user_id'])
+    addresses = user.addresses
+    default_address_obj = next((addr for addr in addresses if addr.is_default), None)
+
+    if default_address_obj:
+        full_address = f"{default_address_obj.address_line}, {default_address_obj.city}, {default_address_obj.postal_code}"
+    else:
+        full_address = ""
+
+    return render_template(
+        "checkout.html",
+        cart=cart,
+        items=items,
+        restaurant=restaurant,
+        total=total,
+        default_address=full_address,
+        addresses=[{
+            'address_line': f"{a.address_line}, {a.city}, {a.postal_code}",
+            'is_default': a.is_default
+        } for a in addresses]
+    )
+
+
 
 @app.route("/place-order", methods=["POST"])
 @login_required

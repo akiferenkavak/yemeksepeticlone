@@ -56,7 +56,19 @@
             <form action="{{ url_for('place_order') }}" method="POST">
                 <div class="form-group">
                     <label for="address">Teslimat Adresi:</label>
-                    <textarea name="address" id="address" rows="3" required>{{ session.get('address', '') }}</textarea>
+                    <select id="address_select" onchange="document.getElementById('address').value = this.value">
+                        <option value="">-- Adres Seçin --</option>
+                        {% for addr in addresses %}
+                            <option value="{{ addr.address_line }}" {% if addr.is_default %}selected{% endif %}>
+                                {{ addr.address_line }}{% if addr.is_default %} (Varsayılan){% endif %}
+                            </option>
+                    {% endfor %}
+                    </select>
+
+                    <br><br>
+
+                    <textarea name="address" id="address" rows="3" required>{{ default_address }}</textarea>
+
                 </div>
                 
                 <div class="form-group">
