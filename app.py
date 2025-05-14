@@ -1072,6 +1072,9 @@ def checkout():
     else:
         full_address = ""
 
+    # Kullanıcının kredi kartlarını getir
+    credit_cards = CreditCard.query.filter_by(user_id=session['user_id']).all()
+
     return render_template(
         "checkout.html",
         cart=cart,
@@ -1082,9 +1085,9 @@ def checkout():
         addresses=[{
             'address_line': f"{a.address_line}, {a.city}, {a.postal_code}",
             'is_default': a.is_default
-        } for a in addresses]
+        } for a in addresses],
+        credit_cards=credit_cards  # Kredi kartlarını template'e gönder
     )
-
 
 
 @app.route("/place-order", methods=["POST"])
@@ -1102,6 +1105,22 @@ def place_order():
     payment_method = request.form.get('payment_method')
     notes = request.form.get('notes', '')
     
+    # Kredi kartı ödeme yöntemi seçildiyse kart ID'sini al
+    credit_card_id = None
+    if payment_method == 'credit_card':
+        credit_card_id = request.form.get('credit_card_id')
+        
+        # Eğer kart ID'si gönderilmediyse ve kredi kartı ödeme seçildiyse
+        if not credit_card_id:
+            flash('Lütfen bir kredi kartı seçin veya yeni bir kart ekleyin.', 'danger')
+            return redirect(url_for('checkout'))
+        
+        # Kartın kullanıcıya ait olup olmadığını doğrula
+        card = CreditCard.query.get(credit_card_id)
+        if not card or card.user_id != session['user_id']:
+            flash('Geçersiz kredi kartı seçimi.', 'danger')
+            return redirect(url_for('checkout'))
+    
     # Calculate total
     total = 0
     for cart_item in cart.items:
@@ -1115,6 +1134,7 @@ def place_order():
         total_amount=total,
         delivery_address=delivery_address,
         status='pending'
+        # payment_method ve credit_card_id'yi siparişe eklemek için model güncellemesi gerekebilir
     )
     
     db.session.add(new_order)

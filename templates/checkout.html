@@ -62,21 +62,60 @@
                             <option value="{{ addr.address_line }}" {% if addr.is_default %}selected{% endif %}>
                                 {{ addr.address_line }}{% if addr.is_default %} (Varsayılan){% endif %}
                             </option>
-                    {% endfor %}
+                        {% endfor %}
                     </select>
 
                     <br><br>
 
                     <textarea name="address" id="address" rows="3" required>{{ default_address }}</textarea>
-
                 </div>
                 
                 <div class="form-group">
                     <label for="payment_method">Ödeme Yöntemi:</label>
-                    <select name="payment_method" id="payment_method" required>
+                    <select name="payment_method" id="payment_method" required onchange="toggleCreditCardOptions()">
                         <option value="cash">Kapıda Ödeme</option>
                         <option value="credit_card">Kredi Kartı</option>
                     </select>
+                </div>
+                
+                <!-- Credit Card Selection Area - Hidden by Default -->
+                <div id="credit_card_options" class="form-group" style="display: none;">
+                    {% if credit_cards %}
+                        <label for="credit_card_id">Kayıtlı Kartlarınız:</label>
+                        <div class="saved-cards-list">
+                            {% for card in credit_cards %}
+                                <div class="card-option">
+                                    <input type="radio" name="credit_card_id" id="card_{{ card.id }}" value="{{ card.id }}" 
+                                           {% if card.is_default %}checked{% endif %} required>
+                                    <label for="card_{{ card.id }}" class="card-label">
+                                        <div class="card-info">
+                                            <span class="card-type">
+                                                {% if card.card_number.startswith('4') %}
+                                                    Visa
+                                                {% elif card.card_number.startswith('5') %}
+                                                    MasterCard
+                                                {% elif card.card_number.startswith('3') %}
+                                                    Amex
+                                                {% else %}
+                                                    Kredi Kartı
+                                                {% endif %}
+                                            </span>
+                                            <span class="card-number">**** **** **** {{ card.last_four }}</span>
+                                            <span class="card-expiry">Son Kullanma: {{ card.expiry_month }}/{{ card.expiry_year }}</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="add-new-card-option">
+                            <a href="{{ url_for('credit_cards') }}" class="btn btn-outline">Yeni Kart Ekle</a>
+                        </div>
+                    {% else %}
+                        <div class="no-cards-message">
+                            <p>Kayıtlı kredi kartınız bulunmamaktadır.</p>
+                            <a href="{{ url_for('credit_cards') }}" class="btn btn-primary">Kredi Kartı Ekle</a>
+                        </div>
+                    {% endif %}
                 </div>
                 
                 <div class="form-group">
@@ -129,10 +168,97 @@
         margin-top: 30px;
     }
     
+    /* Credit Card Selection Styles */
+    .saved-cards-list {
+        margin-bottom: 15px;
+    }
+    
+    .card-option {
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 2px;
+    }
+    
+    .card-option input[type="radio"] {
+        display: none;
+    }
+    
+    .card-option input[type="radio"]:checked + .card-label {
+        background-color: #f8f9fa;
+        border-color: #e74c3c;
+    }
+    
+    .card-label {
+        display: block;
+        padding: 10px 15px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        transition: all 0.3s;
+    }
+    
+    .card-label:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .card-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card-type {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .add-new-card-option {
+        margin-top: 10px;
+    }
+    
+    .no-cards-message {
+        text-align: center;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    
     @media (max-width: 768px) {
         .checkout-content {
             grid-template-columns: 1fr;
         }
     }
 </style>
+
+<script>
+    // Function to toggle credit card options based on payment method selection
+    function toggleCreditCardOptions() {
+        const paymentMethod = document.getElementById('payment_method').value;
+        const creditCardOptions = document.getElementById('credit_card_options');
+        
+        if (paymentMethod === 'credit_card') {
+            creditCardOptions.style.display = 'block';
+            
+            // If there are cards, make sure at least one is selected
+            const cardRadios = document.querySelectorAll('input[name="credit_card_id"]');
+            if (cardRadios.length > 0) {
+                let hasChecked = false;
+                cardRadios.forEach(radio => {
+                    if (radio.checked) hasChecked = true;
+                });
+                
+                if (!hasChecked) {
+                    cardRadios[0].checked = true;
+                }
+            }
+        } else {
+            creditCardOptions.style.display = 'none';
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleCreditCardOptions();
+    });
+</script>
 {% endblock %}
