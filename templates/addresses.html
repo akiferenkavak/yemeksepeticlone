@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Adreslerim{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Adreslerim</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+        Yeni Adres Ekle
+    </button>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Adres</th>
+                <th>Şehir</th>
+                <th>Posta Kodu</th>
+                <th>Varsayılan</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for address in addresses %}
+            <tr>
+                <td>{{ address.address_line }}</td>
+                <td>{{ address.city }}</td>
+                <td>{{ address.postal_code }}</td>
+                <td>
+                    {% if address.is_default %}
+                        Evet
+                    {% else %}
+                        Hayır
+                    {% endif %}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editAddressModal{{ address.id }}">
+                        Düzenle
+                    </button>
+                    <form action="{{ url_for('delete_address', address_id=address.id) }}" method="POST" style="display: inline-block;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bu adresi silmek istediğinize emin misiniz?')">
+                            Sil
+                        </button>
+                    </form>
+                </td>
+            </tr>
+
+            <div class="modal fade" id="editAddressModal{{ address.id }}" tabindex="-1" aria-labelledby="editAddressModalLabel{{ address.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editAddressModalLabel{{ address.id }}">Adresi Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form action="{{ url_for('edit_address', address_id=address.id) }}" method="POST">
+                                <div class="mb-3">
+                                    <label for="address_line" class="form-label">Adres</label>
+                                    <input type="text" class="form-control" id="address_line" name="address_line" value="{{ address.address_line }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="city" class="form-label">Şehir</label>
+                                    <input type="text" class="form-control" id="city" name="city" value="{{ address.city }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="postal_code" class="form-label">Posta Kodu</label>
+                                    <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ address.postal_code }}">
+                                </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="is_default" name="is_default" {% if address.is_default %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_default">Varsayılan Adres</label>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Güncelle</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="modal fade" id="addAddressModal" tabindex="-1" aria-labelledby="addAddressModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAddressModalLabel">Yeni Adres Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('add_address') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="address_line" class="form-label">Adres</label>
+                            <input type="text" class="form-control" id="address_line" name="address_line" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="city" class="form-label">Şehir</label>
+                            <input type="text" class="form-control" id="city" name="city" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="postal_code" class="form-label">Posta Kodu</label>
+                            <input type="text" class="form-control" id="postal_code" name="postal_code">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+                            <label class="form-check-label" for="is_default">Varsayılan Adres</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Ekle</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

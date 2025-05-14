@@ -6,7 +6,8 @@ from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import or_, func, and_
-
+from models import db, User, Address
+from flask import jsonify
 
 
 app = Flask(__name__)
@@ -1809,7 +1810,81 @@ def delete_user(user_id):
         flash(f'Kullanıcı silinirken bir hata oluştu: {str(e)}', 'danger')
     
     return redirect(url_for('admin_users'))
+@app.route("/restaurant/order/cancel/<int:order_id>", methods=["POST"])
+@login_required
+@restaurant_required
+def restaurant_cancel_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    if order.status == 'pending' or order.status == 'preparing':
+        order.status = 'cancelled'
+        db.session.commit()
+        flash('Sipariş başarıyla iptal edildi.', 'success')
+    else:
+        flash('Bu siparişin durumu iptal etmeye uygun değil.', 'danger')
+    return redirect(url_for('restaurant_orders'))
+# Adresleri listeleme
+@app.route('/addresses', methods=['GET'])  # /user/ kaldırıldı
+@login_required
+def list_addresses():
+    user = User.query.get(session['user_id'])
+    addresses = [{"id": addr.id, "address_line": addr.address_line, "city": addr.city, "postal_code": addr.postal_code, "is_default": addr.is_default} for addr in user.addresses]
+    return render_template('addresses.html', addresses=addresses)
 
+# Adres ekleme
+@app.route('/addresses', methods=['POST'])  # /user/ kaldırıldı
+@login_required
+def add_address():
+    address_line = request.form.get('address_line')
+    city = request.form.get('city')
+    postal_code = request.form.get('postal_code')
+    is_default = request.form.get('is_default') == 'on'
+
+    if is_default:
+        Address.query.filter_by(user_id=session['user_id'], is_default=True).update({'is_default': False})
+
+
+    new_address = Address(user_id=session['user_id'], address_line=address_line, city=city, postal_code=postal_code, is_default=is_default)
+    db.session.add(new_address)
+    db.session.commit()
+    flash('Adres başarıyla eklendi!', 'success')
+    return redirect(url_for('list_addresses'))
+
+# Adres düzenleme
+@app.route('/addresses/<int:address_id>', methods=['POST'])  # /user/ kaldırıldı
+@login_required
+def edit_address(address_id):
+    address = Address.query.get_or_404(address_id)
+    if address.user_id != session['user_id']:
+        flash('Bu adresi düzenleme yetkiniz yok!', 'danger')
+        return redirect(url_for('list_addresses'))
+
+    address.address_line = request.form.get('address_line')
+    address.city = request.form.get('city')
+    address.postal_code = request.form.get('postal_code')
+    is_default = request.form.get('is_default') == 'on'
+
+    if is_default:
+        Address.query.filter_by(user_id=session['user_id'], is_default=True).update({'is_default': False})
+
+    address.is_default = is_default
+
+    db.session.commit()
+    flash('Adres başarıyla güncellendi!', 'success')
+    return redirect(url_for('list_addresses'))
+
+# Adres silme
+@app.route('/addresses/delete/<int:address_id>', methods=['POST'])  # /user/ kaldırıldı
+@login_required
+def delete_address(address_id):
+    address = Address.query.get_or_404(address_id)
+    if address.user_id != session['user_id']:
+        flash('Bu adresi silme yetkiniz yok!', 'danger')
+        return redirect(url_for('list_addresses'))
+
+    db.session.delete(address)
+    db.session.commit()
+    flash('Adres başarıyla silindi!', 'success')
+    return redirect(url_for('list_addresses'))
 
 if __name__ == "__main__":
     app.run(debug=True)

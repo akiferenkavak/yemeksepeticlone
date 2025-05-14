@@ -27,10 +27,10 @@
             <div class="accordion-item">
                 <h2 class="accordion-header" id="heading-{{ order.id }}">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ order.id }}" aria-expanded="false" aria-controls="collapse-{{ order.id }}">
-                        <strong>Sipariş ID: {{ order.id }}</strong> &nbsp;-&nbsp; 
-                        Tarih: {{ order.order_date.strftime('%d.%m.%Y %H:%M') }} &nbsp;-&nbsp; 
-                        Müşteri: {{ order.user.name }} &nbsp;-&nbsp; 
-                        Tutar: {{ "%.2f"|format(order.total_amount) }} TL &nbsp;-&nbsp; 
+                        <strong>Sipariş ID: {{ order.id }}</strong> &nbsp;-&nbsp;
+                        Tarih: {{ order.order_date.strftime('%d.%m.%Y %H:%M') }} &nbsp;-&nbsp;
+                        Müşteri: {{ order.user.name }} &nbsp;-&nbsp;
+                        Tutar: {{ "%.2f"|format(order.total_amount) }} TL &nbsp;-&nbsp;
                         Durum: <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span>
                     </button>
                 </h2>
@@ -51,7 +51,7 @@
                                 <p><strong>Teslimat Adresi:</strong> {{ order.delivery_address }}</p>
                             </div>
                         </div>
-                        
+
                         <div class="mt-4">
                             <h5>Sipariş Ürünleri</h5>
                             <table class="table table-striped">
@@ -79,24 +79,30 @@
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         <div class="mt-4">
-                            <h5>Sipariş Durumu Güncelleme</h5>
-                            <form action="{{ url_for('update_order_status', order_id=order.id) }}" method="POST">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <select name="status" class="form-select">
-                                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Beklemede</option>
-                                            <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Hazırlanıyor</option>
-                                            <option value="on_the_way" {% if order.status == 'on_the_way' %}selected{% endif %}>Yolda</option>
-                                            <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
-                                            <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>İptal Edildi</option>
-                                        </select>
+                            <h5>Sipariş Durumu: <span class="badge bg-{{ order.status|status_color }}">{{ order.status|status_text }}</span></h5>
+                            {% if order.status != 'cancelled' %}
+                                <h5>Sipariş Durumu Güncelleme</h5>
+                                <form action="{{ url_for('update_order_status', order_id=order.id) }}" method="POST">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <select name="status" class="form-select">
+                                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Beklemede</option>
+                                                <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Hazırlanıyor</option>
+                                                <option value="on_the_way" {% if order.status == 'on_the_way' %}selected{% endif %}>Yolda</option>
+                                                <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
+                                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>İptal Edildi</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="submit" class="btn btn-primary">Durumu Güncelle</button>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <button type="submit" class="btn btn-primary">Durumu Güncelle</button>
-                                    </div>
-                                </div>
+                                </form>
+                            {% endif %}
+                            <form action="{{ url_for('restaurant_cancel_order', order_id=order.id) }}" method="post" class="mt-2">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')">Siparişi İptal Et</button>
                             </form>
                         </div>
                     </div>
@@ -108,6 +114,7 @@
         <div class="alert alert-info">Henüz hiç sipariş bulunmamaktadır.</div>
     {% endif %}
 </div>
+
 
 {% block extra_js %}
 <script>
@@ -121,7 +128,7 @@
                 if (target) {
                     const isExpanded = this.getAttribute('aria-expanded') === 'true';
                     this.setAttribute('aria-expanded', !isExpanded);
-                    
+
                     if (isExpanded) {
                         target.classList.remove('show');
                     } else {

@@ -18,10 +18,17 @@ class User(db.Model):
     
     # Relationship with Restaurant for restaurant owners
     restaurant = db.relationship('Restaurant', backref='owner', uselist=False)
-    
+    addresses = db.relationship('Address', backref='user', lazy=True)
+
     def __repr__(self):
         return f'<User {self.name}>'
-
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    address_line = db.Column(db.String(255), nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    postal_code = db.Column(db.String(20), nullable=True)
+    is_default = db.Column(db.Boolean, default=False)
 class Restaurant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
