@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{{ restaurant.restaurant_name }} - Detaylar{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard restaurant-detail">
+    <h2>Restoran Detayları: {{ restaurant.restaurant_name }}</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin_restaurants') }}" class="btn btn-secondary">← Restoranlara Dön</a>
+    </div>
+    
+    <div class="restaurant-status">
+        <h3>Durum</h3>
+        <div class="status-badges">
+            <div class="status-badge {% if restaurant.is_approved %}approved{% else %}pending{% endif %}">
+                {% if restaurant.is_approved %}
+                    <i class="fas fa-check-circle"></i> Onaylanmış
+                {% else %}
+                    <i class="fas fa-clock"></i> Onay Bekliyor
+                {% endif %}
+            </div>
+            
+            <div class="status-badge {% if restaurant.is_suspended %}suspended{% else %}active{% endif %}">
+                {% if restaurant.is_suspended %}
+                    <i class="fas fa-ban"></i> Askıya Alınmış
+                {% else %}
+                    <i class="fas fa-check-circle"></i> Aktif
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="status-actions">
+            <form action="{{ url_for('admin_toggle_restaurant_suspension', restaurant_id=restaurant.id) }}" method="POST" class="d-inline">
+                {% if restaurant.is_suspended %}
+                    <button type="submit" class="btn btn-success">Aktif Et</button>
+                {% else %}
+                    <button type="submit" class="btn btn-warning">Askıya Al</button>
+                {% endif %}
+            </form>
+            
+            <form action="{{ url_for('admin_delete_restaurant', restaurant_id=restaurant.id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ restaurant.restaurant_name }}');">
+                <button type="submit" class="btn btn-danger">Restoranı Sil</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="restaurant-details-container">
+        <div class="detail-section">
+            <h3>Restoran Bilgileri</h3>
+            <form action="{{ url_for('admin_restaurant_update', restaurant_id=restaurant.id) }}" method="POST">
+                <div class="form-group">
+                    <label for="restaurant_name">Restoran Adı:</label>
+                    <input type="text" id="restaurant_name" name="restaurant_name" class="form-control" value="{{ restaurant.restaurant_name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cuisine_type">Mutfak Tipi:</label>
+                    <input type="text" id="cuisine_type" name="cuisine_type" class="form-control" value="{{ restaurant.cuisine_type }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tax_id">Vergi Numarası:</label>
+                    <input type="text" id="tax_id" name="tax_id" class="form-control" value="{{ restaurant.tax_id }}" disabled>
+                    <small class="form-text text-muted">Vergi numarası değiştirilemez.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Açıklama:</label>
+                    <textarea id="description" name="description" class="form-control" rows="3">{{ restaurant.description }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Telefon:</label>
+                    <input type="text" id="phone" name="phone" class="form-control" value="{{ restaurant.phone }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Adres:</label>
+                    <textarea id="address" name="address" class="form-control" rows="2">{{ restaurant.address }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="working_hours">Çalışma Saatleri:</label>
+                    <input type="text" id="working_hours" name="working_hours" class="form-control" value="{{ restaurant.working_hours }}" placeholder="Örn: Pzt-Cum 09:00-22:00, Cmt-Paz 10:00-23:00">
+                </div>
+                
+                <div class="form-group">
+                    <label for="commission_rate">Komisyon Oranı (%):</label>
+                    <input type="number" id="commission_rate" name="commission_rate" class="form-control" value="{{ restaurant.commission_rate }}" step="0.1" min="0" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="rating">Puanı:</label>
+                    <input type="text" id="rating" name="rating" class="form-control" value="{{ restaurant.rating }}" disabled>
+                    <small class="form-text text-muted">Puan müşteri değerlendirmeleri ile otomatik hesaplanır.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="created_at">Kayıt Tarihi:</label>
+                    <input type="text" id="created_at" name="created_at" class="form-control" value="{{ restaurant.created_at.strftime('%d.%m.%Y %H:%M') }}" disabled>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Bilgileri Güncelle</button>
+            </form>
+        </div>
+        
+        <div class="detail-section">
+            <h3>Restoran Sahibi Bilgileri</h3>
+            <table class="detail-table">
+                <tr>
+                    <th>Ad Soyad:</th>
+                    <td>{{ owner.name }}</td>
+                </tr>
+                <tr>
+                    <th>E-posta:</th>
+                    <td>{{ owner.email }}</td>
+                </tr>
+                <tr>
+                    <th>Telefon:</th>
+                    <td>{{ owner.phone if owner.phone else 'Belirtilmemiş' }}</td>
+                </tr>
+                <tr>
+                    <th>Kayıt Tarihi:</th>
+                    <td>{{ owner.created_at.strftime('%d.%m.%Y') }}</td>
+                </tr>
+            </table>
+            
+            <div class="mt-3">
+                <a href="{{ url_for('admin_users') }}?search={{ owner.email }}" class="btn btn-info">Kullanıcı Detayları</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(restaurantName) {
+        return confirm(restaurantName + " isimli restoranı silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve restorana ait tüm veriler silinecektir.");
+    }
+</script>
+{% endblock %}

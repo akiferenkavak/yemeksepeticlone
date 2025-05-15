@@ -36,10 +36,18 @@ class Restaurant(db.Model):
     cuisine_type = db.Column(db.String(50), nullable=False)
     tax_id = db.Column(db.String(20), unique=True, nullable=False)
     is_approved = db.Column(db.Boolean, default=False)
+    is_suspended = db.Column(db.Boolean, default=False)  # New field
     rating = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     image_path = db.Column(db.String(255), nullable=True, default='default_restaurant.png')
 
+
+    # New fields for additional restaurant information
+    description = db.Column(db.Text, nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    address = db.Column(db.Text, nullable=True)
+    working_hours = db.Column(db.String(255), nullable=True)  # Store as JSON string
+    commission_rate = db.Column(db.Float, default=10.0)  # Default 10%
     
     def __repr__(self):
         return f'<Restaurant {self.restaurant_name}>'

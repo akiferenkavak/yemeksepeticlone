@@ -17,16 +17,31 @@
     <div class="admin-menu">
         <h3>İşlemler</h3>
         <ul>
-            <li><a href="{{ url_for('restaurant_approvals') }}">Restoran Onay İşlemleri 
-                {% if pending_count %}
-                <span class="badge">{{ pending_count }}</span>
-                {% endif %}
-            </a></li>
+            <li>
+                <a href="{{ url_for('restaurant_approvals') }}">
+                    Restoran Onay İşlemleri 
+                    {% if pending_count %}
+                    <span class="badge">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
             <li><a href="{{ url_for('admin_orders') }}">Siparişleri Görüntüle</a></li>
             <li><a href="{{ url_for('admin_users') }}">Kullanıcı Yönetimi</a></li>
             <li><a href="#">Sistem Ayarları</a></li>
         </ul>
+    
+        <div class="dashboard-card">
+            <div class="card-icon">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <div class="card-content">
+                <h3>Restoranlar</h3>
+                <p>Toplam {{ restaurant_count }} restoran</p>
+                <a href="{{ url_for('admin_restaurants') }}" class="btn btn-primary">Restoranları Yönet</a>
+            </div>
+        </div>
     </div>
+    
     
     <div class="pending-restaurants">
         <h3>Onay Bekleyen Restoranlar</h3>
