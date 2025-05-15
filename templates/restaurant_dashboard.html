@@ -28,14 +28,96 @@
         <ul>
             <li><a href="{{ url_for('menu_management') }}">Menü Yönetimi</a></li>
             <li><a href="{{ url_for('restaurant_orders') }}">Sipariş Takibi</a></li>
+            <li>
+                <a href="{{ url_for('restaurant_order_reports') }}">
+                    Sipariş Sorunları
+                    {% if pending_reports_count > 0 %}
+                        <span class="badge bg-danger">{{ pending_reports_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
             <li><a href="{{ url_for('edit_restaurant_profile') }}">Restoran Bilgilerini Düzenle</a></li>
         </ul>
     </div>
     
-    <div class="current-orders">
-        <h3>Aktif Siparişler</h3>
-        <!-- Bu kısım daha sonra veritabanından gelecek verilerle doldurulacak -->
-        <p>Henüz aktif sipariş bulunmuyor.</p>
+    <div class="dashboard-stats">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h4>Bekleyen Siparişler</h4>
+                    <p class="stat">{{ pending_orders_count|default(0) }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h4>Müşteri Sorunları</h4>
+                    <p class="stat">{{ pending_reports_count|default(0) }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h4>Ortalama Puanınız</h4>
+                    <p class="stat">{{ "%.1f"|format(restaurant.rating|default(0)) }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %}
+
+<style>
+    .dashboard-stats {
+        margin-top: 30px;
+    }
+    
+    .stat-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        height: 100%;
+    }
+    
+    .stat-card h4 {
+        margin-top: 0;
+        color: #333;
+        font-size: 18px;
+    }
+    
+    .stat {
+        font-size: 36px;
+        font-weight: bold;
+        color: #e74c3c;
+        margin: 10px 0;
+    }
+    
+    .badge {
+        vertical-align: middle;
+        margin-left: 5px;
+    }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    
+    .col-md-4 {
+        position: relative;
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+        margin-bottom: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}

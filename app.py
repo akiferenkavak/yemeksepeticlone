@@ -74,15 +74,276 @@ def admin_dashboard():
     pending_count = Restaurant.query.filter_by(is_approved=False).count()
     return render_template("admin_dashboard.html", pending_count=pending_count)
 
-# Restaurant dashboard page
+# OrderReport model should be imported at the top of app.py
+from models import OrderReport
+
+# Helper functions for report statuses and types (keep these functions)
+def report_status_color(status):
+    colors = {
+        'pending': 'warning',
+        'in_review': 'info',
+        'resolved': 'success',
+        'rejected': 'danger'
+    }
+    return colors.get(status, 'secondary')
+
+def report_status_text(status):
+    texts = {
+        'pending': 'Beklemede',
+        'in_review': 'İncelemede',
+        'resolved': 'Çözüldü',
+        'rejected': 'Reddedildi'
+    }
+    return texts.get(status, status)
+
+def report_type_text(report_type):
+    texts = {
+        'missing_item': 'Eksik Ürün',
+        'incorrect_item': 'Yanlış Ürün',
+        'quality_issue': 'Kalite Sorunu',
+        'delivery_issue': 'Teslimat Sorunu',
+        'other': 'Diğer'
+    }
+    return texts.get(report_type, report_type)
+
+# Register the filters with Flask
+@app.template_filter('report_status_color')
+def report_status_color_filter(status):
+    return report_status_color(status)
+
+@app.template_filter('report_status_text')
+def report_status_text_filter(status):
+    return report_status_text(status)
+
+@app.template_filter('report_type_text')
+def report_type_text_filter(report_type):
+    return report_type_text(report_type)
+
+# Show report issue form
+@app.route("/orders/<int:order_id>/report", methods=["GET"])
+@login_required
+def report_order_issue(order_id):
+    if session['user_type'] != 'user':
+        flash('Bu işlemi gerçekleştirmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Get the order and verify ownership
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        flash('Bu siparişi görüntüleme yetkiniz yok.', 'danger')
+        return redirect(url_for('user_orders'))
+    
+    # Check if order is delivered
+    if order.status != 'delivered':
+        flash('Sadece teslim edilmiş siparişler için sorun bildirebilirsiniz.', 'warning')
+        return redirect(url_for('user_orders'))
+    
+    # Check if report already exists
+    existing_report = OrderReport.query.filter_by(order_id=order_id, user_id=session['user_id']).first()
+    if existing_report:
+        flash('Bu sipariş için zaten bir sorun bildirdiniz.', 'warning')
+        return redirect(url_for('view_order_reports'))
+    
+    return render_template('report_order_issue.html', order=order)
+
+# Submit report
+@app.route("/orders/<int:order_id>/report", methods=["POST"])
+@login_required
+def submit_order_report(order_id):
+    if session['user_type'] != 'user':
+        flash('Bu işlemi gerçekleştirmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Get the order and verify ownership
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        flash('Bu siparişi görüntüleme yetkiniz yok.', 'danger')
+        return redirect(url_for('user_orders'))
+    
+    # Check if order is delivered
+    if order.status != 'delivered':
+        flash('Sadece teslim edilmiş siparişler için sorun bildirebilirsiniz.', 'warning')
+        return redirect(url_for('user_orders'))
+    
+    # Check if report already exists
+    existing_report = OrderReport.query.filter_by(order_id=order_id, user_id=session['user_id']).first()
+    if existing_report:
+        flash('Bu sipariş için zaten bir sorun bildirdiniz.', 'warning')
+        return redirect(url_for('view_order_reports'))
+    
+    # Get form data
+    report_type = request.form.get('report_type')
+    description = request.form.get('description')
+    
+    # Validate data
+    if not report_type or not description:
+        flash('Lütfen tüm alanları doldurun.', 'danger')
+        return redirect(url_for('report_order_issue', order_id=order_id))
+    
+    # Create new report
+    new_report = OrderReport(
+        order_id=order_id,
+        user_id=session['user_id'],
+        report_type=report_type,
+        description=description,
+        status='pending'
+    )
+    
+    try:
+        db.session.add(new_report)
+        db.session.commit()
+        
+        # Optionally send notification to restaurant (could be implemented as email)
+        
+        flash('Sorun bildirimi başarıyla gönderildi. En kısa sürede incelenecektir.', 'success')
+        return redirect(url_for('view_order_reports'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Bir hata oluştu: {str(e)}', 'danger')
+        return redirect(url_for('report_order_issue', order_id=order_id))
+
+# View all reports for the current user
+@app.route("/my-order-reports")
+@login_required
+def view_order_reports():
+    if session['user_type'] != 'user':
+        flash('Bu sayfaya erişmek için müşteri hesabı gereklidir.', 'danger')
+        return redirect(url_for('home'))
+    
+    # Get all reports for this user
+    reports = OrderReport.query.filter_by(user_id=session['user_id']).order_by(OrderReport.created_at.desc()).all()
+    
+    # Pass the helper functions directly to the template context
+    return render_template(
+        'order_reports.html', 
+        reports=reports,
+        report_status_color=report_status_color,
+        report_status_text=report_status_text,
+        report_type_text=report_type_text
+    )
+
+# Restaurant - View order reports
+@app.route("/restaurant/order-reports")
+@app.route("/restaurant/order-reports/<tab>")
+@login_required
+@restaurant_required
+def restaurant_order_reports(tab='pending'):
+    # Get the restaurant associated with the logged-in user
+    restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
+    
+    if not restaurant:
+        flash('Restoran bilgisi bulunamadı', 'danger')
+        return redirect(url_for('restaurant_dashboard'))
+    
+    # Base query to get reports for orders from this restaurant
+    reports_query = OrderReport.query.join(Order).filter(Order.restaurant_id == restaurant.id)
+    
+    # Apply tab filter
+    if tab == 'pending':
+        reports_query = reports_query.filter(OrderReport.status == 'pending')
+    elif tab == 'in_review':
+        reports_query = reports_query.filter(OrderReport.status == 'in_review')
+    elif tab == 'resolved':
+        reports_query = reports_query.filter(OrderReport.status == 'resolved')
+    # For 'all', no additional filter needed
+    
+    # Order by created date, newest first
+    reports = reports_query.order_by(OrderReport.created_at.desc()).all()
+    
+    # Pass the helper functions directly to the template context
+    return render_template(
+        'restaurant_order_reports.html', 
+        reports=reports, 
+        current_tab=tab,
+        report_status_color=report_status_color,
+        report_status_text=report_status_text,
+        report_type_text=report_type_text
+    )
+
+# Restaurant - Resolve order report
+@app.route("/restaurant/order-reports/<int:report_id>/resolve", methods=["POST"])
+@login_required
+@restaurant_required
+def resolve_order_report(report_id):
+    # Get the restaurant associated with the logged-in user
+    restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
+    
+    if not restaurant:
+        flash('Restoran bilgisi bulunamadı', 'danger')
+        return redirect(url_for('restaurant_dashboard'))
+    
+    # Get the report
+    report = OrderReport.query.get_or_404(report_id)
+    
+    # Verify that this report is for an order from this restaurant
+    order = Order.query.get(report.order_id)
+    if not order or order.restaurant_id != restaurant.id:
+        flash('Bu raporu görüntüleme yetkiniz yok', 'danger')
+        return redirect(url_for('restaurant_order_reports'))
+    
+    # Get form data
+    new_status = request.form.get('status')
+    resolution_note = request.form.get('resolution_note')
+    
+    # Validate data
+    if not new_status or not resolution_note:
+        flash('Lütfen tüm alanları doldurun', 'danger')
+        return redirect(url_for('restaurant_order_reports'))
+    
+    # Update report
+    report.status = new_status
+    report.resolution_note = resolution_note
+    
+    # If resolved or rejected, set resolved_at timestamp
+    if new_status in ['resolved', 'rejected']:
+        report.resolved_at = datetime.now(timezone.utc)
+    
+    try:
+        db.session.commit()
+        flash('Sorun raporu başarıyla güncellendi', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Bir hata oluştu: {str(e)}', 'danger')
+    
+    # Redirect to appropriate tab
+    if new_status == 'in_review':
+        return redirect(url_for('restaurant_order_reports', tab='in_review'))
+    elif new_status == 'resolved':
+        return redirect(url_for('restaurant_order_reports', tab='resolved'))
+    else:
+        return redirect(url_for('restaurant_order_reports'))
+
+# Update restaurant dashboard to show report count
 @app.route("/restaurant/dashboard")
 @login_required
 @restaurant_required
 def restaurant_dashboard():
     # Giriş yapmış restoranın bilgilerini getir
     restaurant = Restaurant.query.filter_by(user_id=session['user_id']).first()
-    return render_template("restaurant_dashboard.html", restaurant=restaurant)
-
+    
+    # Initial values
+    pending_orders_count = 0
+    pending_reports_count = 0
+    
+    if restaurant:
+        # Count pending reports
+        pending_reports_count = OrderReport.query.join(Order).filter(
+            Order.restaurant_id == restaurant.id,
+            OrderReport.status == 'pending'
+        ).count()
+        
+        # Count pending orders
+        pending_orders_count = Order.query.filter(
+            Order.restaurant_id == restaurant.id,
+            Order.status.in_(['pending', 'preparing'])
+        ).count()
+    
+    return render_template(
+        "restaurant_dashboard.html", 
+        restaurant=restaurant,
+        pending_reports_count=pending_reports_count,
+        pending_orders_count=pending_orders_count
+    )
 
 # Delivery person access control decorator
 def delivery_required(f):

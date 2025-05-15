@@ -190,3 +190,21 @@ class CreditCard(db.Model):
     def _repr_(self):
         return f'<CreditCard {self.id} - {self.last_four}>'
     
+class OrderReport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False)  # 'missing_item', 'incorrect_item', 'quality_issue', 'other'
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'in_review', 'resolved', 'rejected'
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    resolution_note = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    order = db.relationship('Order', backref='reports')
+    user = db.relationship('User', backref='order_reports')
+    
+    def __repr__(self):
+        return f'<OrderReport {self.id} - {self.report_type}>'
+    

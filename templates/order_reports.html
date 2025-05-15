@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Sipariş Sorunlarım{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Sipariş Sorunlarım</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="mb-3">
+        <a href="{{ url_for('user_orders') }}" class="btn btn-outline-secondary">← Siparişlerime Dön</a>
+    </div>
+    
+    {% if reports %}
+        <div class="row">
+            {% for report in reports %}
+                <div class="col-md-12 mb-3">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Sorun #{{ report.id }} - Sipariş #{{ report.order.id }}</span>
+                            <span class="badge bg-{{ report_status_color(report.status) }}">{{ report_status_text(report.status) }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Restoran:</strong> {{ report.order.restaurant.restaurant_name }}</p>
+                                    <p><strong>Sorun Türü:</strong> {{ report_type_text(report.report_type) }}</p>
+                                    <p><strong>Tarih:</strong> {{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Açıklama:</strong></p>
+                                    <p class="description-text">{{ report.description }}</p>
+                                </div>
+                            </div>
+                            
+                            {% if report.status == 'resolved' and report.resolution_note %}
+                                <div class="resolution-section mt-3">
+                                    <h6>Çözüm Notu:</h6>
+                                    <div class="resolution-note p-2 bg-light rounded">
+                                        <p class="mb-0">{{ report.resolution_note }}</p>
+                                        <small class="text-muted">{{ report.resolved_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">Henüz bildirilmiş sipariş sorunu bulunmamaktadır.</div>
+    {% endif %}
+</div>
+
+<style>
+    .description-text {
+        white-space: pre-line;
+    }
+    
+    .resolution-note {
+        border-left: 3px solid #28a745;
+    }
+    
+    .badge {
+        font-size: 0.9em;
+        padding: 0.4em 0.6em;
+    }
+</style>
+{% endblock %}

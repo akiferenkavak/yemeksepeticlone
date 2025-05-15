@@ -3,6 +3,19 @@
 {% block content %}
 <div class="container mt-4">
     <h2>Siparişlerim</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="mb-3">
+        <a href="{{ url_for('view_order_reports') }}" class="btn btn-outline-secondary">Sorun Bildirimlerim</a>
+    </div>
+    
     {% if orders %}
         <div class="row">
             {% for order in orders %}
@@ -32,6 +45,15 @@
                                     </li>
                                     {% endfor %}
                                 </ul>
+                                
+                                <!-- Add Report Issue Button for delivered orders -->
+                                {% if order.status == 'delivered' %}
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                                        <a href="{{ url_for('report_order_issue', order_id=order.id) }}" class="btn btn-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> Sorun Bildir
+                                        </a>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
