@@ -72,7 +72,7 @@ def restaurant_required(f):
 def admin_dashboard():
     # Count pending restaurant approvals
     pending_count = Restaurant.query.filter_by(is_approved=False).count()
-    return render_template("admin_dashboard.html", pending_count=pending_count)
+    return render_template("admin_dashboard.html", pending_count=pending_count, restaurant_count=Restaurant.query.count())
 
 # Restaurant dashboard page
 @app.route("/restaurant/dashboard")
@@ -155,7 +155,7 @@ def home():
     sort_dir = request.args.get('sort_dir', 'desc')
     
     # Base query - only approved restaurants
-    restaurants_query = Restaurant.query.filter_by(is_approved=True)
+    restaurants_query = Restaurant.query.filter_by(is_approved=True, is_suspended=False)
     
     # Apply filters
     if cuisine_filter != 'all':
@@ -1924,6 +1924,201 @@ def delete_address(address_id):
     db.session.commit()
     flash('Adres başarıyla silindi!', 'success')
     return redirect(url_for('list_addresses'))
+
+
+# Admin Restaurant Routes
+
+@app.route("/admin/restaurants")
+@login_required
+@admin_required
+def admin_restaurants():
+    """List all restaurants with filtering options"""
+    # Get filters from query parameters
+    approval_status = request.args.get('approval_status', 'all')
+    suspended_status = request.args.get('suspended_status', 'all')
+    search_term = request.args.get('search', '')
+    
+    # Base query
+    restaurants_query = Restaurant.query.join(User)
+    
+    # Apply filters
+    if approval_status != 'all':
+        is_approved = (approval_status == 'approved')
+        restaurants_query = restaurants_query.filter(Restaurant.is_approved == is_approved)
+    
+    if suspended_status != 'all':
+        is_suspended = (suspended_status == 'suspended')
+        restaurants_query = restaurants_query.filter(Restaurant.is_suspended == is_suspended)
+    
+    # Apply search if provided
+    if search_term:
+        search_pattern = f"%{search_term}%"
+        restaurants_query = restaurants_query.filter(
+            or_(
+                Restaurant.restaurant_name.like(search_pattern),
+                User.email.like(search_pattern)
+            )
+        )
+    
+    # Order by ID
+    restaurants_query = restaurants_query.order_by(Restaurant.id)
+    
+    # Execute query
+    restaurants = restaurants_query.all()
+    
+    return render_template(
+        "admin_restaurants.html", 
+        restaurants=restaurants,
+        current_approval_status=approval_status,
+        current_suspended_status=suspended_status,
+        search_term=search_term
+    )
+
+@app.route("/admin/restaurants/<int:restaurant_id>")
+@login_required
+@admin_required
+def admin_restaurant_detail(restaurant_id):
+    """View and edit restaurant details"""
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    restaurant_owner = User.query.get(restaurant.user_id)
+    
+    return render_template(
+        "admin_restaurant_detail.html",
+        restaurant=restaurant,
+        owner=restaurant_owner
+    )
+
+@app.route("/admin/restaurants/<int:restaurant_id>/update", methods=["POST"])
+@login_required
+@admin_required
+def admin_restaurant_update(restaurant_id):
+    """Update restaurant details"""
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    
+    # Update restaurant fields
+    restaurant.restaurant_name = request.form.get('restaurant_name')
+    restaurant.cuisine_type = request.form.get('cuisine_type')
+    restaurant.description = request.form.get('description')
+    restaurant.phone = request.form.get('phone')
+    restaurant.address = request.form.get('address')
+    restaurant.working_hours = request.form.get('working_hours')
+    
+    # Handle commission rate conversion from string to float
+    try:
+        commission_rate = float(request.form.get('commission_rate', 10.0))
+        restaurant.commission_rate = commission_rate
+    except ValueError:
+        flash('Commission rate must be a number', 'danger')
+        return redirect(url_for('admin_restaurant_detail', restaurant_id=restaurant_id))
+    
+    # Update database
+    db.session.commit()
+    flash('Restaurant information updated successfully', 'success')
+    
+    return redirect(url_for('admin_restaurant_detail', restaurant_id=restaurant_id))
+
+@app.route("/admin/restaurants/<int:restaurant_id>/toggle_suspension", methods=["POST"])
+@login_required
+@admin_required
+def admin_toggle_restaurant_suspension(restaurant_id):
+    """Toggle restaurant suspension status"""
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    
+    # Toggle suspension status
+    restaurant.is_suspended = not restaurant.is_suspended
+    
+    # Update database
+    db.session.commit()
+    
+    status_msg = "suspended" if restaurant.is_suspended else "reactivated"
+    flash(f'Restaurant {restaurant.restaurant_name} has been {status_msg}', 'success')
+    
+    return redirect(url_for('admin_restaurant_detail', restaurant_id=restaurant_id))
+
+@app.route("/admin/restaurants/<int:restaurant_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def admin_delete_restaurant(restaurant_id):
+    """Delete a restaurant"""
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    
+    # Store restaurant name for flash message
+    restaurant_name = restaurant.restaurant_name
+    
+    # Delete restaurant
+    db.session.delete(restaurant)
+    db.session.commit()
+    
+    flash(f'Restaurant {restaurant_name} has been deleted', 'success')
+    
+    return redirect(url_for('admin_restaurants'))
+
+@app.route("/admin/restaurants/create", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_create_restaurant():
+    """Create a new restaurant"""
+    if request.method == "POST":
+        # Get form data
+        restaurant_name = request.form.get('restaurant_name')
+        cuisine_type = request.form.get('cuisine_type')
+        tax_id = request.form.get('tax_id')
+        email = request.form.get('email')
+        owner_name = request.form.get('owner_name')
+        password = request.form.get('password')
+        description = request.form.get('description', '')
+        phone = request.form.get('phone', '')
+        address = request.form.get('address', '')
+        working_hours = request.form.get('working_hours', '')
+        
+        try:
+            commission_rate = float(request.form.get('commission_rate', 10.0))
+        except ValueError:
+            flash('Commission rate must be a number', 'danger')
+            return redirect(url_for('admin_create_restaurant'))
+        
+        # Check if email already exists
+        if User.query.filter_by(email=email).first():
+            flash('Email already exists', 'danger')
+            return redirect(url_for('admin_create_restaurant'))
+        
+        # Check if tax_id already exists
+        if Restaurant.query.filter_by(tax_id=tax_id).first():
+            flash('Tax ID already exists', 'danger')
+            return redirect(url_for('admin_create_restaurant'))
+        
+        # Create new restaurant owner user
+        owner = User(
+            name=owner_name,
+            email=email,
+            password=generate_password_hash(password),
+            user_type='restaurant',
+            is_active=True
+        )
+        db.session.add(owner)
+        db.session.flush()  # Get user ID before committing
+        
+        # Create new restaurant
+        restaurant = Restaurant(
+            user_id=owner.id,
+            restaurant_name=restaurant_name,
+            cuisine_type=cuisine_type,
+            tax_id=tax_id,
+            is_approved=True,  # Auto-approve when created by admin
+            is_suspended=False,
+            description=description,
+            phone=phone,
+            address=address,
+            working_hours=working_hours,
+            commission_rate=commission_rate
+        )
+        db.session.add(restaurant)
+        db.session.commit()
+        
+        flash(f'Restaurant {restaurant_name} created successfully', 'success')
+        return redirect(url_for('admin_restaurants'))
+    
+    return render_template("admin_create_restaurant.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
