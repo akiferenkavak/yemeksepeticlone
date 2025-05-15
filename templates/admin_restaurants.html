@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Restoran Yönetimi{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h2>Restoran Yönetimi</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Admin Paneline Dön</a>
+        <a href="{{ url_for('admin_create_restaurant') }}" class="btn btn-primary">+ Yeni Restoran Ekle</a>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters-container">
+        <h3>Filtreler</h3>
+        <form action="{{ url_for('admin_restaurants') }}" method="GET" class="filters-form">
+            <div class="filter-group">
+                <label for="approval_status">Onay Durumu:</label>
+                <select name="approval_status" id="approval_status">
+                    <option value="all" {% if current_approval_status == 'all' %}selected{% endif %}>Tümü</option>
+                    <option value="approved" {% if current_approval_status == 'approved' %}selected{% endif %}>Onaylanmış</option>
+                    <option value="pending" {% if current_approval_status == 'pending' %}selected{% endif %}>Onay Bekleyen</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="suspended_status">Askıya Alma Durumu:</label>
+                <select name="suspended_status" id="suspended_status">
+                    <option value="all" {% if current_suspended_status == 'all' %}selected{% endif %}>Tümü</option>
+                    <option value="active" {% if current_suspended_status == 'active' %}selected{% endif %}>Aktif</option>
+                    <option value="suspended" {% if current_suspended_status == 'suspended' %}selected{% endif %}>Askıya Alınmış</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="search">Ara:</label>
+                <input type="text" name="search" id="search" value="{{ search_term }}" placeholder="Restoran adı ara...">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Filtrele</button>
+        </form>
+    </div>
+    
+    <!-- Restaurants Table -->
+    <div class="restaurants-container">
+        <h3>Restoranlar</h3>
+        
+        {% if restaurants %}
+            <table class="approval-table restaurants-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Restoran Adı</th>
+                        <th>Mutfak Tipi</th>
+                        <th>Onay Durumu</th>
+                        <th>Durum</th>
+                        <th>Puan</th>
+                        <th>Kayıt Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for restaurant in restaurants %}
+                        <tr>
+                            <td data-label="ID">{{ restaurant.id }}</td>
+                            <td data-label="Restoran Adı">{{ restaurant.restaurant_name }}</td>
+                            <td data-label="Mutfak Tipi">{{ restaurant.cuisine_type }}</td>
+                            <td data-label="Onay Durumu">
+                                {% if restaurant.is_approved %}
+                                    <span class="badge bg-success">Onaylanmış</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Onay Bekliyor</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Durum">
+                                {% if restaurant.is_suspended %}
+                                    <span class="badge bg-danger">Askıya Alınmış</span>
+                                {% else %}
+                                    <span class="badge bg-success">Aktif</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Puan">{{ restaurant.rating }}</td>
+                            <td data-label="Kayıt Tarihi">{{ restaurant.created_at.strftime('%d.%m.%Y') }}</td>
+                            <td data-label="İşlemler">
+                                <a href="{{ url_for('admin_restaurant_detail', restaurant_id=restaurant.id) }}" class="btn btn-info btn-sm">Detay</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Hiç restoran bulunamadı.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
